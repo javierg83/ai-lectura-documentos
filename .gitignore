@@ -1,0 +1,78 @@
+# ===============================================
+# PYTHON / LANGGRAPH / GENERAL PROJECT .gitignore
+# ===============================================
+
+Lib/
+
+# Entorno virtual
+.venv/
+venv/
+env/
+
+# Archivos de Python compilados
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+
+# Archivos JSON generados por la ejecucion del sistema
+*.json
+*.txt
+archivos_entrada_temp/
+archivos_texto/
+archivos/
+Imagenes Ejemplo Convolucion/
+Scripts/
+
+
+# Archivos de logs
+*.log
+logs/
+
+# Archivos temporales
+*.tmp
+*.temp
+*.swp
+
+# Archivos creados por sistemas operativos
+.DS_Store
+Thumbs.db
+
+# Salidas de Jupyter
+*.ipynb_checkpoints/
+.ipynb_checkpoints/
+
+# Archivos de base vectorial y cachés
+chroma/
+vector_store/
+*.db
+*.sqlite
+*.sqlite3
+
+# PDFs procesados / archivos grandes
+uploads/
+processed_pdfs/
+pages_cache/
+
+# Configuraciones privadas
+.env
+.env.local
+*.env
+
+# Carpetas del proyecto que pueden contener datos sensibles
+data/
+secrets/
+
+# Librerías descargadas temporalmente
+*.whl
+dist/
+build/
+
+# Editor
+.vscode/
+.idea/
+
+# LangChain / LangGraph cache
+.cache/
+.langchain/
+.langgraph/

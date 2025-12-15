@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Chat con Embeddings</title>
+  <link rel="stylesheet" href="/static/css/style.css"/>
+</head>
+<body class="page-body">
+  <nav class="sub-nav">
+    <a href="/" class="nav-link">← Home</a>
+  </nav>
+
+  <section class="section chat">
+    <h2>Chat con Embeddings</h2>
+
+    <form id="selector-form-emb" class="selector-form">
+      <h3>Selecciona Documentos Embebidos:</h3>
+      <div class="table-wrapper">
+        <table id="docs-table-emb">
+          <thead>
+            <tr>
+              <th>Seleccionar</th>
+              <th>Original</th>
+              <th>Archivo JSON</th>
+              <th>Total Páginas</th>
+              <th>Fecha</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+      <button type="submit" class="btn">Confirmar Selección</button>
+      <div id="selected-list-emb" class="selected-list"></div>
+    </form>
+
+    <div id="chat-container-emb" class="chat-container"></div>
+
+    <form id="chat-form-emb" class="chat-form">
+      <input id="chat-input-emb" type="text" placeholder="Escribe tu mensaje." autocomplete="off" required />
+      <button type="submit" class="btn">Enviar</button>
+    </form>
+
+    <section id="match-section" class="match-section">
+      <h3>Contenido más relevante del documento:</h3>
+      <div class="match-section-columns">
+        <div id="match-content" class="match-col"></div>
+        <div id="match-pdf" class="match-col match-pdf"></div>
+      </div>
+    </section>
+
+    <section id="used-text-section" class="match-section">
+      <h3>Texto usado para responder:</h3>
+      <pre id="used-text" class="used-text" style="background:#f5f5f5; padding:1rem; border:1px solid #ccc; white-space:pre-wrap;"></pre>
+    </section>
+  </section>
+
+  <script>
+  document.addEventListener('DOMContentLoaded', () => {
+    const chatFormEmb = document.getElementById('chat-form-emb');
+    const chatContEmb = document.getElementById('chat-container-emb');
+    const chatInputEmb = document.getElementById('chat-input-emb');
+    const userIdEmb = Date.now().toString();
+    let selectedEmb = [];
+
+    fetch('/api/doc_raw')
+      .then(res => res.json())
+      .then(docs => {
+        const tbody = document.querySelector('#docs-table-emb tbody');
+        docs.forEach(d => {
+          const nombreOriginal = d.nombre_original || d.nombreOriginal || d.filename || '—';
+          const filename = d.filename || '—';
+          const pages = d.pages_count || d.pagesCount || '-';
+          const fecha = d.timestamp || '-';
+          const docId = d.doc_id || d.docId || '';
+
+          const tr = document.createElement('tr');
+          tr.innerHTML = `
+            <td><input type="checkbox" value="${docId}" data-nombre="${nombreOriginal}" /></td>
+            <td>${nombreOriginal}</td>
+            <td>${filename}</td>
+            <td>${pages}</td>
+            <td>${fecha}</td>
+          `;
+          tbody.appendChild(tr);
+        });
+      });
+
+    document.getElementById('selector-form-emb').addEventListener('submit', e => {
+      e.preventDefault();
+      const checkboxes = document.querySelectorAll('#docs-table-emb input:checked');
+      selectedEmb = Array.from(checkboxes).map(cb => cb.value);
+      const listDiv = document.getElementById('selected-list-emb');
+      listDiv.innerHTML = '';
+      checkboxes.forEach(cb => {
+        const span = document.createElement('span');
+        span.textContent = cb.dataset.nombre || cb.value;
+        span.className = 'selected-item';
+        listDiv.appendChild(span);
+      });
+      chatContEmb.innerHTML = '';
+      document.getElementById('match-content').innerHTML = '';
+      document.getElementById('match-pdf').innerHTML = '';
+      document.getElementById('used-text').textContent = '';
+    });
+
+    chatFormEmb.addEventListener('submit', async e => {
+      e.preventDefault();
+      const msg = chatInputEmb.value.trim();
+      if (!msg) return;
+
+      const pUser = document.createElement('p');
+      pUser.innerHTML = `<strong>Tú:</strong> ${msg}`;
+      chatContEmb.appendChild(pUser);
+      chatInputEmb.value = '';
+
+      const res = await fetch('/api/chat_embedding', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ user_id: userIdEmb, message: msg, docs: selectedEmb })
+      });
+
+      const data = await res.json();
+      const reply = data.reply || 'No se obtuvo respuesta.';
+
+      const pBot = document.createElement('p');
+      pBot.innerHTML = `<strong>Asistente:</strong> ${reply}`;
+      chatContEmb.appendChild(pBot);
+      chatContEmb.scrollTop = chatContEmb.scrollHeight;
+
+      const matchDiv = document.getElementById('match-content');
+      const matchPdf = document.getElementById('match-pdf');
+      const usedText = document.getElementById('used-text');
+
+      matchDiv.innerHTML = '';
+      matchPdf.innerHTML = '';
+      usedText.textContent = data.best_match_content || data.resultados?.[0]?.contenido || '';
+
+      if (data.page_number && data.pdf_filename) {
+        const citation = document.createElement('div');
+        citation.classList.add('match-citation');
+        const fileUrl = `/archivos_texto/${data.doc_id || selectedEmb[0]}/${data.pdf_filename}#page=${data.page_number}`;
+        citation.innerHTML = `
+          <strong>📄 Fuente:</strong> ${data.pdf_filename}, página ${data.page_number}<br/>
+          <a href="${fileUrl}" target="_blank" class="btn" style="margin-top: 0.5rem;">Abrir PDF en página citada</a>
+        `;
+        matchDiv.appendChild(citation);
+      }
+
+      const replyWithoutTables = reply.replace(/<table[\s\S]*?<\/table>/gi, '').trim();
+      if (replyWithoutTables) {
+        const pResumen = document.createElement('p');
+        pResumen.textContent = replyWithoutTables;
+        matchDiv.appendChild(pResumen);
+      }
+
+      const tables = reply.match(/<table[\s\S]*?<\/table>/gi);
+      if (tables) {
+        const parser = new DOMParser();
+        tables.forEach(html => {
+          const doc = parser.parseFromString(html, 'text/html');
+          const table = doc.querySelector('table');
+          if (table) {
+            table.classList.add('result-table');
+            matchDiv.appendChild(table);
+          }
+        });
+      }
+
+      if (data.pdf_filename && data.page_number) {
+        const pdfViewer = document.createElement('div');
+        pdfViewer.classList.add('match-pdf-container');
+        const embed = document.createElement('embed');
+        embed.src = `/archivos_texto/${data.doc_id || selectedEmb[0]}/${data.pdf_filename}#page=${data.page_number}`;
+        embed.type = 'application/pdf';
+        embed.style.width = '100%';
+        embed.style.height = '800px';
+        pdfViewer.appendChild(embed);
+        matchPdf.appendChild(pdfViewer);
+      }
+    });
+  });
+  </script>
+</body>
+</html>

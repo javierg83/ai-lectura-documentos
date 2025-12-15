@@ -1,0 +1,264 @@
+:root {
+  --primary-color: #0a58ca;
+  --secondary-color: #343a40;
+  --text-color: #212529;
+  --background-color: #f1f5f9;
+  --table-header-bg: #0a58ca;
+  --table-header-color: #fff;
+  --table-row-hover: #e9ecef;
+}
+
+html, body {
+  margin: 0;
+  padding: 0;
+  background: var(--background-color);
+  color: var(--text-color);
+  font-family: Arial, sans-serif;
+  height: 100%;
+}
+
+.page-body {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow: hidden;
+}
+
+/* Navegación principal y secundaria */
+.main-nav, .sub-nav {
+  background: #fff;
+  padding: 0.5rem 1rem;
+  border-bottom: 1px solid #ddd;
+}
+.main-nav .nav-link,
+.sub-nav .nav-link {
+  margin-right: 1rem;
+  color: var(--primary-color);
+  text-decoration: none;
+  font-weight: bold;
+}
+.main-nav .nav-link:hover,
+.sub-nav .nav-link:hover {
+  text-decoration: underline;
+}
+
+/* Contenedor de contenido */
+.container, .section {
+  flex: 1;
+  overflow-y: auto;
+  padding: 1rem;
+}
+
+/* Títulos de sección */
+.section h2 {
+  margin-top: 0;
+  color: var(--primary-color);
+}
+
+/* Formularios de selector */
+.selector-form {
+  margin-bottom: 1rem;
+}
+.table-wrapper {
+  overflow-x: auto;
+}
+#docs-table, #docs-table-emb {
+  width: 100%;
+  border-collapse: collapse;
+}
+#docs-table th, #docs-table td,
+#docs-table-emb th, #docs-table-emb td {
+  border: 1px solid var(--secondary-color);
+  padding: 0.5rem;
+}
+#docs-table thead th, #docs-table-emb thead th {
+  background: var(--table-header-bg);
+  color: var(--table-header-color);
+}
+#docs-table tbody tr:hover, #docs-table-emb tbody tr:hover {
+  background: var(--table-row-hover);
+}
+
+/* Lista de ítems seleccionados */
+.selected-list, .selected-list-emb {
+  margin-top: 0.5rem;
+}
+.selected-item {
+  display: inline-block;
+  background: var(--table-row-hover);
+  padding: 0.3rem 0.6rem;
+  margin-right: 0.3rem;
+  border-radius: 4px;
+}
+
+/* Chat container (mensajes) */
+.chat-container, .chat-container-emb {
+  flex: 1;
+  overflow-y: auto;
+  margin-bottom: 0.5rem;
+  border: 1px solid #ddd;
+  padding: 0.5rem;
+  background: #fafafa;
+  border-radius: 4px;
+}
+
+/* Formulario de chat */
+.chat-form, .chat-form-emb {
+  display: flex;
+}
+.chat-form input, .chat-form-emb input {
+  flex: 1;
+  padding: 0.5rem;
+  border: 1px solid var(--secondary-color);
+  border-radius: 4px 0 0 4px;
+}
+.chat-form button, .chat-form-emb button {
+  padding: 0.5rem 1rem;
+  background: var(--primary-color);
+  color: #fff;
+  border: none;
+  border-radius: 0 4px 4px 0;
+  cursor: pointer;
+}
+.chat-form button:hover, .chat-form-emb button:hover {
+  opacity: 0.9;
+}
+
+/* Botones generales */
+.btn {
+  background: var(--primary-color);
+  color: #fff;
+  border: none;
+  padding: 0.5rem 1rem;
+  border-radius: 4px;
+  cursor: pointer;
+}
+.btn:hover {
+  opacity: 0.9;
+}
+
+/* Iframes (Embeddings y Extracción) */
+.section.extraction iframe,
+.section.embedding iframe {
+  width: 100%;
+  border: none;
+  min-height: 400px;
+}
+
+/* Sección de coincidencia (contenido más relevante) */
+.match-section {
+  margin-top: 2rem;
+  padding: 1rem;
+  background-color: var(--background-color);
+  border-radius: 8px;
+  border: 1px solid #ccc;
+}
+.match-section h3 {
+  margin-top: 0;
+  color: var(--primary-color);
+}
+
+/* Tablas generadas dentro de match-section */
+.match-section table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 1rem;
+  font-size: 14px;
+  background-color: #fff;
+  border: 1px solid var(--secondary-color);
+}
+.match-section table th,
+.match-section table td {
+  border: 1px solid var(--secondary-color);
+  padding: 0.5rem 0.75rem;
+  text-align: left;
+  vertical-align: top;
+}
+.match-section table th {
+  background-color: var(--table-header-bg);
+  color: var(--table-header-color);
+  font-weight: bold;
+}
+.match-section table tr:nth-child(even) {
+  background-color: #f8f9fa;
+}
+
+/* 🔹 Cita destacada de fuente */
+.match-citation {
+  background: #eef1f4;
+  border-left: 4px solid var(--primary-color);
+  padding: 0.5rem 1rem;
+  margin-bottom: 1rem;
+  font-size: 0.9rem;
+  color: var(--text-color);
+  font-style: italic;
+}
+
+/* 🎯 Estilo adicional para extracción */
+.container {
+  max-width: 600px;
+  margin: 2rem auto;
+  background: #fff;
+  padding: 2rem;
+  border-radius: 8px;
+  box-shadow: 0 0 10px rgba(0,0,0,0.1);
+}
+
+h1 {
+  text-align: center;
+  margin-bottom: 1.5rem;
+  color: var(--primary-color);
+}
+
+.form-group {
+  margin-bottom: 1.2rem;
+}
+
+.form-group label {
+  display: block;
+  margin-bottom: 0.5rem;
+  font-weight: bold;
+}
+
+.form-group input[type="file"],
+.form-group input[type="text"],
+.form-group select {
+  width: 100%;
+  padding: 0.5rem;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+}
+
+button[type="submit"] {
+  display: inline-block;
+  background-color: var(--primary-color);
+  color: #fff;
+  border: none;
+  padding: 0.6rem 1.2rem;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+button[type="submit"]:hover {
+  background-color: #084298;
+}
+
+.resultado {
+  margin-top: 1rem;
+  font-weight: bold;
+}
+
+.enlace-volver {
+  margin-top: 2rem;
+  text-align: center;
+}
+
+.enlace-volver a {
+  color: var(--primary-color);
+  text-decoration: none;
+  font-size: 0.95rem;
+}
+
+.enlace-volver a:hover {
+  text-decoration: underline;
+}

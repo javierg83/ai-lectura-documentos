@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Chat con IA</title>
+  <!-- Usa url_for para que funcione aunque cambie el prefijo de la app -->
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body class="page-body">
+  <nav class="sub-nav">
+    <a href="/" class="nav-link">← Home</a>
+  </nav>
+
+  <section class="section chat">
+    <h2>Chat con IA</h2>
+
+    <form id="selector-form" class="selector-form">
+      <h3>Selecciona Documentos:</h3>
+      <div class="table-wrapper">
+        <table id="docs-table">
+          <thead>
+            <tr>
+              <th>Seleccionar</th>
+              <th>Archivo</th>
+              <th>Original</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+      <button type="submit" class="btn">Confirmar Selección</button>
+      <div id="selected-list" class="selected-list"></div>
+    </form>
+
+    <div id="chat-container" class="chat-container"></div>
+
+    <form id="chat-form" class="chat-form">
+      <input id="chat-input" type="text" placeholder="Escribe tu mensaje..." autocomplete="off" required />
+      <button type="submit" class="btn">Enviar</button>
+    </form>
+  </section>
+
+  <script>
+    // --- Cargar lista de documentos ---
+    fetch('/api/docs')
+      .then(res => {
+        if (!res.ok) {
+          throw new Error('Error al obtener documentos');
+        }
+        return res.json();
+      })
+      .then(docs => {
+        if (!Array.isArray(docs)) {
+          console.error('Respuesta inesperada en /api/docs:', docs);
+          return;
+        }
+        const tbody = document.querySelector('#docs-table tbody');
+        docs.forEach(d => {
+          const tr = document.createElement('tr');
+          tr.innerHTML = `
+            <td><input type="checkbox" value="${d.id}" /></td>
+            <td>${d.filename}</td>
+            <td>${d.original}</td>
+          `;
+          tbody.appendChild(tr);
+        });
+      })
+      .catch(err => {
+        console.error(err);
+        const tbody = document.querySelector('#docs-table tbody');
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td colspan="3">No se pudieron cargar los documentos (revisa Redis o /api/docs).</td>
+        `;
+        tbody.appendChild(tr);
+      });
+
+    let selectedDocs = [];
+    document.getElementById('selector-form').addEventListener('submit', e => {
+      e.preventDefault();
+      selectedDocs = Array.from(document.querySelectorAll('#docs-table input:checked'))
+        .map(cb => cb.value);
+      // Mostrar lista debajo del botón
+      const listDiv = document.getElementById('selected-list');
+      listDiv.innerHTML = '';
+      selectedDocs.forEach(id => {
+        const span = document.createElement('span');
+        span.textContent = id;
+        span.className = 'selected-item';
+        listDiv.appendChild(span);
+      });
+      // Limpiar chat previo
+      document.getElementById('chat-container').innerHTML = '';
+    });
+
+    // --- Chat ---
+    const chatForm = document.getElementById('chat-form');
+    const chatCont = document.getElementById('chat-container');
+    const chatInput = document.getElementById('chat-input');
+
+    // Un user_id simple por sesión
+    const userId = Date.now().toString();
+
+    chatForm.addEventListener('submit', async e => {
+      e.preventDefault();
+      const msg = chatInput.value.trim();
+      if (!msg) return;
+
+      // Mostrar mensaje usuario
+      const pUser = document.createElement('p');
+      pUser.innerHTML = `<strong>Tú:</strong> ${msg}`;
+      chatCont.appendChild(pUser);
+      chatInput.value = '';
+
+      try {
+        const res = await fetch('/api/chat', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({
+            user_id: userId,
+            message: msg,
+            docs: selectedDocs,
+            embedding_mode: false
+          })
+        });
+
+        const data = await res.json();
+        const pBot = document.createElement('p');
+
+        if (!res.ok || data.error) {
+          pBot.innerHTML = `<strong>Error:</strong> ${data.error || 'No se pudo obtener respuesta del servidor.'}`;
+        } else {
+          pBot.innerHTML = `<strong>Asistente:</strong> ${data.reply}`;
+        }
+
+        chatCont.appendChild(pBot);
+        chatCont.scrollTop = chatCont.scrollHeight;
+      } catch (err) {
+        console.error(err);
+        const pBot = document.createElement('p');
+        pBot.innerHTML = `<strong>Error:</strong> No se pudo contactar al servidor.`;
+        chatCont.appendChild(pBot);
+        chatCont.scrollTop = chatCont.scrollHeight;
+      }
+    });
+  </script>
+</body>
+</html>

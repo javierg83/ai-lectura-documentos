@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Extracción de Documentos</title>
+  <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+  <div class="container">
+    <h1>Extracción de Documentos</h1>
+
+    <form id="formulario-extraccion" action="/api/extraccion" method="POST" enctype="multipart/form-data">
+      <div class="form-group">
+        <label for="archivo">Selecciona un archivo PDF:</label>
+        <input type="file" id="archivo" name="archivo" accept=".pdf" required>
+      </div>
+
+      <div class="form-group">
+        <label for="tipo_extraccion">Tipo de extracción:</label>
+        <select name="tipo_extraccion" id="tipo_extraccion">
+          <option value="ia">Uso de IA</option>
+          <option value="texto">Texto seleccionable</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label for="read_all">Leer todas las páginas:</label>
+        <select name="read_all" id="read_all">
+          <option value="true">Sí</option>
+          <option value="false">No</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label for="paginas">Páginas específicas (ej: 1,3,5):</label>
+        <input type="text" id="paginas" name="paginas" placeholder="Opcional">
+      </div>
+
+      <button type="submit">Procesar</button>
+    </form>
+
+    <div id="resultado" class="resultado"></div>
+
+    <div class="enlace-volver">
+      <a href="/">← Volver al inicio</a>
+    </div>
+  </div>
+
+  <script>
+    document.getElementById("formulario-extraccion").addEventListener("submit", async function (e) {
+      e.preventDefault();
+
+      const form = e.target;
+      const formData = new FormData(form);
+
+      const response = await fetch("/api/extraccion", {
+        method: "POST",
+        body: formData
+      });
+
+      const resultado = document.getElementById("resultado");
+      if (response.ok) {
+        const data = await response.json();
+        resultado.innerText = `✅ Archivo procesado: ${data.archivo}, páginas: ${data.total_paginas}`;
+        resultado.style.color = "green";
+      } else {
+        const data = await response.json();
+        resultado.innerText = `❌ Error: ${data.error || "Fallo inesperado"}`;
+        resultado.style.color = "red";
+      }
+    });
+  </script>
+</body>
+</html>
