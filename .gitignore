@@ -17,7 +17,6 @@ __pycache__/
 
 # Archivos JSON generados por la ejecucion del sistema
 *.json
-*.txt
 archivos_entrada_temp/
 archivos_texto/
 archivos/
