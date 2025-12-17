@@ -12,3 +12,4 @@ def extract_page_image(pdf_path: str, page_number: int) -> bytes:
         page = doc.load_page(page_number)
         pix = page.get_pixmap(dpi=300)
         return pix.tobytes("png")
+    
