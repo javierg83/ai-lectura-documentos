@@ -5,6 +5,36 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Chat con Embeddings</title>
   <link rel="stylesheet" href="/static/css/style.css"/>
+  <style>
+    .selected-item {
+      display: inline-block;
+      background: #eef;
+      padding: 0.3rem 0.6rem;
+      margin: 0.2rem;
+      border-radius: 5px;
+    }
+    .result-table {
+      margin-top: 1rem;
+      border-collapse: collapse;
+      width: 100%;
+    }
+    .result-table th, .result-table td {
+      border: 1px solid #ccc;
+      padding: 0.5rem;
+    }
+    .btn {
+      margin-top: 1rem;
+      padding: 0.5rem 1rem;
+      border: none;
+      background-color: #0366d6;
+      color: white;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+    .btn:hover {
+      background-color: #024ea2;
+    }
+  </style>
 </head>
 <body class="page-body">
   <nav class="sub-nav">
@@ -68,11 +98,11 @@
       .then(docs => {
         const tbody = document.querySelector('#docs-table-emb tbody');
         docs.forEach(d => {
-          const nombreOriginal = d.nombre_original || d.nombreOriginal || d.filename || '—';
-          const filename = d.filename || '—';
-          const pages = d.pages_count || d.pagesCount || '-';
-          const fecha = d.timestamp || '-';
-          const docId = d.doc_id || d.docId || '';
+          const nombreOriginal = d.nombre_original ?? d.nombreOriginal ?? d.filename ?? '';
+          const filename = d.filename ?? '';
+          const pages = d.pages_count ?? d.pagesCount ?? '';
+          const fecha = d.timestamp ?? '';
+          const docId = d.doc_id ?? d.docId ?? '';
 
           const tr = document.createElement('tr');
           tr.innerHTML = `
@@ -86,6 +116,7 @@
         });
       });
 
+    // Guarda selección de documentos al presionar "Confirmar Selección"
     document.getElementById('selector-form-emb').addEventListener('submit', e => {
       e.preventDefault();
       const checkboxes = document.querySelectorAll('#docs-table-emb input:checked');
@@ -104,10 +135,11 @@
       document.getElementById('used-text').textContent = '';
     });
 
+    // Envío del mensaje del usuario
     chatFormEmb.addEventListener('submit', async e => {
       e.preventDefault();
       const msg = chatInputEmb.value.trim();
-      if (!msg) return;
+      if (!msg || selectedEmb.length === 0) return;
 
       const pUser = document.createElement('p');
       pUser.innerHTML = `<strong>Tú:</strong> ${msg}`;
@@ -117,8 +149,12 @@
       const res = await fetch('/api/chat_embedding', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ user_id: userIdEmb, message: msg, docs: selectedEmb })
+        body: JSON.stringify({
+          pregunta: msg,
+          documentos: selectedEmb
+        })
       });
+
 
       const data = await res.json();
       const reply = data.reply || 'No se obtuvo respuesta.';

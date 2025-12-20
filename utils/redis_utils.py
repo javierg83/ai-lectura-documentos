@@ -1,5 +1,3 @@
-# utils/redis_utils.py
-
 import redis
 import json
 import os
@@ -100,3 +98,32 @@ def leer_hash(clave):
         import traceback
         traceback.print_exc()
         return {}
+
+
+def get_redis_client():
+    redis_host = os.getenv("REDIS_HOST", "localhost")
+    redis_port = int(os.getenv("REDIS_PORT", 6379))
+    redis_db = int(os.getenv("REDIS_DB", 0))
+    redis_username = os.getenv("REDIS_USERNAME", None)
+    redis_password = os.getenv("REDIS_PASSWORD", None)
+    redis_ssl = os.getenv("REDIS_SSL", "false").lower() == "true"
+
+    connection_params = {
+        "host": redis_host,
+        "port": redis_port,
+        "db": redis_db,
+        "decode_responses": True,
+    }
+
+    if redis_password:
+        connection_params["password"] = redis_password
+    if redis_username:
+        connection_params["username"] = redis_username
+    if redis_ssl:
+        connection_params["ssl"] = True
+
+    print(f"[redis_utils] 🚀 Conectando a Redis con parámetros: {connection_params}")
+    return redis.Redis(**connection_params)
+
+# ✅ Alias compatible con versiones anteriores
+get_redis_connection = get_redis_client
