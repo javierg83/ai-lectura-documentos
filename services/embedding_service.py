@@ -44,6 +44,9 @@ def run_embedding_batch(doc_id):
 
     errores = []
     doc_id_normalizado = normalizar_nombre(doc_id)
+    
+    # Store parsed data to avoid reading files twice
+    parsed_pages_data = []
 
     for archivo in tqdm(archivos, desc=f"[🔍] Procesando {len(archivos)} páginas"):
         try:
@@ -54,6 +57,13 @@ def run_embedding_batch(doc_id):
 
             pagina = data.get("pagina", -1)
             elementos = data.get("elementos", [])
+            
+            # Store parsed data for reuse when building complete document text
+            parsed_pages_data.append({
+                "archivo": archivo,
+                "pagina": pagina,
+                "elementos": elementos
+            })
 
             print(f"[🔎] Página {pagina} → elementos encontrados: {len(elementos)}")
 
@@ -93,22 +103,22 @@ def run_embedding_batch(doc_id):
             traceback.print_exc()
 
     try:
-        texto_completo = ""
-        for archivo in archivos:
-            path_archivo = os.path.join(ruta, archivo)
-            with open(path_archivo, encoding="utf-8") as f:
-                data = json.load(f)
-            elementos = data.get("elementos", [])
-            texto_completo += "\n\n".join([e.get("contenido", "") for e in elementos if e.get("contenido")]) + "\n"
-
-        texto_completo = limpiar_texto(texto_completo.strip())
+        # Reuse parsed data instead of reading files again
+        texto_partes = []
+        for page_data in parsed_pages_data:
+            elementos = page_data["elementos"]
+            contenido_pagina = "\n\n".join([e.get("contenido", "") for e in elementos if e.get("contenido")])
+            if contenido_pagina:
+                texto_partes.append(contenido_pagina)
+        
+        texto_completo = limpiar_texto("\n".join(texto_partes).strip())
         if texto_completo:
             emb_doc = generar_embedding(texto_completo, model=MODEL_EMBEDDING)
             r.hset(f"doc_raw:{doc_id_normalizado}", mapping={
                 "nombre_original": doc_id,
                 "doc_id": doc_id_normalizado,
                 "texto": texto_completo,
-                "content": texto_completo,  # 👈 clave usada por chat_service
+                "content": texto_completo,  # clave usada por chat_service
                 "embedding": json.dumps(emb_doc),
                 "pages_count": len(archivos),
                 "filename": doc_id,
