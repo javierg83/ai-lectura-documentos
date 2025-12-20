@@ -22,6 +22,11 @@ def home():
     print("[app] 🏠 Renderizando home.html")
     return render_template("home.html")
 
+@app.route("/chat_embedding")
+def chat_embedding_page():
+    print("[app] 💬 Renderizando chat_embedding.html")
+    return render_template("chat_embedding.html")
+
 # ✅ Ruta adicional para servir PDFs desde archivos_texto/<doc_id>/<archivo>.pdf
 @app.route('/archivos_texto/<path:subpath>')
 def serve_archivos_texto(subpath):
