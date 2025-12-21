@@ -262,3 +262,40 @@ button[type="submit"]:hover {
 .enlace-volver a:hover {
   text-decoration: underline;
 }
+
+/* ==========================
+   Tablas de listado (Licitaciones)
+   =============================== */
+
+.styled-table {
+  width: 100%;
+  border-collapse: collapse;
+  background: #fff;
+  font-size: 14px;
+}
+
+.styled-table th,
+.styled-table td {
+  border: 1px solid var(--secondary-color);
+  padding: 0.6rem 0.75rem;
+  text-align: left;
+  vertical-align: middle;
+  white-space: nowrap;
+}
+
+.styled-table thead th {
+  background: var(--table-header-bg);
+  color: var(--table-header-color);
+  font-weight: bold;
+  position: sticky;
+  top: 0;
+  z-index: 1;
+}
+
+.styled-table tbody tr:nth-child(even) {
+  background-color: #f8f9fa;
+}
+
+.styled-table tbody tr:hover {
+  background-color: var(--table-row-hover);
+}

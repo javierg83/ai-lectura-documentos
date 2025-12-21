@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Licitaciones</title>
+  <link rel="stylesheet" href="/static/css/style.css"/>
+</head>
+
+<body class="page-body">
+
+  <!-- Navegación secundaria -->
+  <nav class="sub-nav">
+    <a href="/" class="nav-link">← Home</a>
+  </nav>
+
+  <section class="section">
+    <h2>Licitaciones cargadas</h2>
+
+    <!-- Wrapper con scroll horizontal -->
+    <div class="table-wrapper">
+      <table id="licitaciones-table" class="styled-table">
+        <thead>
+          <tr>
+            <th>Original</th>
+            <th>Archivo JSON</th>
+            <th>Total Páginas</th>
+            <th>Fecha</th>
+            <th>Acción</th>
+          </tr>
+        </thead>
+        <tbody>
+          <!-- JS -->
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+
+      fetch('/api/doc_raw')
+        .then(res => res.json())
+        .then(docs => {
+          const tbody = document.querySelector('#licitaciones-table tbody');
+
+          docs.forEach(d => {
+            const nombreOriginal = d.nombre_original || d.nombreOriginal || d.filename || '—';
+            const filename       = d.filename || '—';
+            const pages          = d.pages_count || d.pagesCount || '-';
+            const fecha          = d.timestamp || '-';
+
+            const tr = document.createElement('tr');
+
+            tr.innerHTML = `
+              <td style="min-width: 260px;">${nombreOriginal}</td>
+              <td style="min-width: 220px;">${filename}</td>
+              <td>${pages}</td>
+              <td>${fecha}</td>
+              <td>
+                <a href="/detalle_licitacion" class="btn">
+                  Ver detalle
+                </a>
+              </td>
+            `;
+
+            tbody.appendChild(tr);
+          });
+        })
+        .catch(err => {
+          console.error('Error cargando licitaciones', err);
+        });
+
+    });
+  </script>
+
+</body>
+</html>

@@ -34,7 +34,7 @@ from typing import Dict, List, Tuple, Any, Optional
 
 # ---------- Config por defecto ----------
 DEFAULT_IGNORE_DIRS = {
-    ".git", ".hg", ".svn", ".venv", "venv", "Lib", "__pycache__", "node_modules",
+    ".git", ".hg", ".svn", ".venv", "venv", "Lib", "Scripts", "archivos", "archivos_entrada_temp", "archivos_texto", "__pycache__", "node_modules",
     ".mypy_cache", ".pytest_cache", ".ruff_cache", ".idea", ".vscode", ".tox",
     "dist", "build", ".eggs", "*.egg-info", "1"
 }

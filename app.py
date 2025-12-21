@@ -29,6 +29,19 @@ def serve_archivos_texto(subpath):
     # Si tus PDFs están en otro lado, revisa esta ruta.
     return app.send_static_file('archivos_texto/' + subpath)
 
+# ✅ Nueva ruta para listado de licitaciones
+@app.route('/licitaciones')
+def licitaciones():
+    print("[app] 📋 Renderizando licitaciones.html")
+    return render_template("licitaciones.html")
+
+# ✅ Ruta para detalle de licitación
+@app.route('/detalle_licitacion')
+def detalle_licitacion():
+    print("[app] 📄 Renderizando detalle_licitacion.html")
+    return render_template("detalle_licitacion.html")
+
+
 if __name__ == '__main__':
     print("[app] ✅ Flask corriendo en 0.0.0.0:5000 (debug=True)")
     app.run(host='0.0.0.0', port=5000, debug=True)

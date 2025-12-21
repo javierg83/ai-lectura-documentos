@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Detalle de Licitación</title>
+    <style>
+        body {
+            font-family: Arial, Helvetica, sans-serif;
+            background: #f4f6f8;
+            margin: 0;
+            padding: 20px;
+        }
+
+        h1 {
+            margin-bottom: 5px;
+        }
+
+        h2 {
+            background: #0b5ed7;
+            color: white;
+            padding: 10px;
+            font-size: 16px;
+            margin-top: 30px;
+        }
+
+        .form-section {
+            background: white;
+            padding: 15px;
+            border-radius: 6px;
+            margin-bottom: 20px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+
+        .form-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 12px;
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+        }
+
+        label {
+            font-size: 12px;
+            color: #555;
+            margin-bottom: 4px;
+        }
+
+        input, textarea {
+            padding: 8px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            font-size: 13px;
+        }
+
+        textarea {
+            resize: vertical;
+            min-height: 60px;
+        }
+
+        .readonly {
+            background: #f1f1f1;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+            font-size: 13px;
+        }
+
+        th, td {
+            border: 1px solid #ccc;
+            padding: 8px;
+            vertical-align: top;
+        }
+
+        th {
+            background: #e9ecef;
+            text-align: left;
+        }
+
+        .yes {
+            color: green;
+            font-weight: bold;
+        }
+
+        .no {
+            color: red;
+            font-weight: bold;
+        }
+
+        .footer-note {
+            font-size: 12px;
+            color: #666;
+            margin-top: 10px;
+        }
+    </style>
+</head>
+<body>
+
+<h1>Detalle de Licitación</h1>
+<p><strong>Estado:</strong> Sin información</p>
+
+<!-- ================= CABECERA ================= -->
+<h2>1. Cabecera de la Licitación</h2>
+<div class="form-section">
+    <div class="form-grid">
+        <div class="form-group">
+            <label>ID Licitación / Código</label>
+            <input class="readonly" value="Sin información" readonly>
+        </div>
+        <div class="form-group">
+            <label>Título</label>
+            <input class="readonly" value="Adquisición de juegos modulares y equipamiento deportivo de calistenia" readonly>
+        </div>
+        <div class="form-group">
+            <label>Organismo</label>
+            <input class="readonly" value="Municipalidad de Huechuraba" readonly>
+        </div>
+        <div class="form-group">
+            <label>Unidad solicitante</label>
+            <input class="readonly" value="Dirección de Aseo y Ornato" readonly>
+        </div>
+    </div>
+</div>
+
+<!-- ================= DATOS ECONÓMICOS ================= -->
+<h2>2. Datos Económicos</h2>
+<div class="form-section">
+    <div class="form-grid">
+        <div class="form-group">
+            <label>Presupuesto máximo</label>
+            <input class="readonly" value="$15.000.000 IVA incluido" readonly>
+        </div>
+        <div class="form-group">
+            <label>Moneda de la oferta</label>
+            <input class="readonly" value="Pesos chilenos (SIN IVA)" readonly>
+        </div>
+        <div class="form-group">
+            <label>Forma de pago</label>
+            <input class="readonly" value="Sin información" readonly>
+        </div>
+        <div class="form-group">
+            <label>Plazo de pago</label>
+            <input class="readonly" value="Sin información" readonly>
+        </div>
+    </div>
+</div>
+
+<!-- ================= GARANTÍAS ================= -->
+<h2>3. Garantías</h2>
+<div class="form-section">
+    <div class="form-grid">
+        <div class="form-group">
+            <label>Garantía seriedad de la oferta</label>
+            <input class="readonly" value="No indicada" readonly>
+        </div>
+        <div class="form-group">
+            <label>Garantía fiel cumplimiento</label>
+            <input class="readonly" value="No indicada" readonly>
+        </div>
+    </div>
+</div>
+
+<!-- ================= ÍTEMS ================= -->
+<h2>4. Ítems Solicitados (Sección Crítica)</h2>
+<div class="form-section">
+
+<table>
+    <thead>
+        <tr>
+            <th>Línea</th>
+            <th>N° Ítem</th>
+            <th>Cantidad</th>
+            <th>Unidad</th>
+            <th>Nombre del ítem</th>
+            <th>Ficha técnica</th>
+            <th>Características técnicas declaradas</th>
+            <th>Detalle técnico</th>
+        </tr>
+    </thead>
+    <tbody>
+        <tr>
+            <td>1</td>
+            <td>1</td>
+            <td>1</td>
+            <td>Unidad</td>
+            <td>Juego modular infantil alto tráfico</td>
+            <td>N°1</td>
+            <td class="yes">Sí</td>
+            <td>
+                Plástico LLDPE roto-moldeado, postes galvanizados, capacidad mínima 20 niños,
+                área de seguridad definida, certificaciones ISO 9001, 14001, 18001, GS-TUV, EN-71.
+            </td>
+        </tr>
+        <tr>
+            <td>2</td>
+            <td>2</td>
+            <td>2</td>
+            <td>Unidades</td>
+            <td>Pasamanos superior calistenia</td>
+            <td>N°2</td>
+            <td class="yes">Sí</td>
+            <td>
+                Estructura acero galvanizado, tubos Ø 89–114 mm, área de seguridad ≥ 12,6 m²,
+                certificaciones ISO, TUV, EN-71.
+            </td>
+        </tr>
+        <tr>
+            <td>2</td>
+            <td>3</td>
+            <td>2</td>
+            <td>Unidades</td>
+            <td>Barras paralelas calistenia</td>
+            <td>N°3</td>
+            <td class="yes">Sí</td>
+            <td>
+                Tubos galvanizados Ø 48–60 mm, dimensiones variables según modelo,
+                área de seguridad ≥ 10,6 m².
+            </td>
+        </tr>
+        <tr>
+            <td>2</td>
+            <td>4</td>
+            <td>2</td>
+            <td>Unidades</td>
+            <td>Barras altas de flexiones</td>
+            <td>N°4</td>
+            <td class="yes">Sí</td>
+            <td>
+                Tubos principales Ø 89–114 mm, estructura secundaria Ø 32–48 mm,
+                soldaduras MIG anticorrosión.
+            </td>
+        </tr>
+        <tr>
+            <td>2</td>
+            <td>5</td>
+            <td>1</td>
+            <td>Unidad</td>
+            <td>Circuito completo de calistenia</td>
+            <td>N°5</td>
+            <td class="yes">Sí</td>
+            <td>
+                Circuito con escaleras, barras superiores e inferiores,
+                área seguridad mínima 9 × 3 m, certificaciones ISO, TUV, EN-71.
+            </td>
+        </tr>
+    </tbody>
+</table>
+
+<p class="footer-note">
+    ⚠️ Todos los ítems declaran características técnicas obligatorias según bases administrativas.
+</p>
+
+</div>
+
+<!-- ================= CRITERIOS ================= -->
+<h2>5. Criterios de Evaluación</h2>
+<div class="form-section">
+    <div class="form-grid">
+        <div class="form-group">
+            <label>Precio</label>
+            <input class="readonly" value="80%" readonly>
+        </div>
+        <div class="form-group">
+            <label>Plazo de entrega</label>
+            <input class="readonly" value="20%" readonly>
+        </div>
+    </div>
+</div>
+
+<!-- ================= OBSERVACIONES ================= -->
+<h2>6. Observaciones Generales</h2>
+<div class="form-section">
+    <textarea class="readonly" readonly>
+La licitación se adjudica por línea de producto.
+Deriva en Orden de Compra y no en contrato.
+La Municipalidad se reserva el derecho de desestimar ofertas.
+    </textarea>
+</div>
+
+</body>
+</html>
