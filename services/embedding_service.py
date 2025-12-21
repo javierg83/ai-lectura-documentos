@@ -133,27 +133,43 @@ def list_raw_docs():
     nombres = [k.decode().replace("doc_raw:", "") for k in claves]
     return sorted(nombres)
 
-def run_chat_embedding(user_id, mensaje, docs_normalizados):
-    from openai import OpenAI
+def run_chat_embedding(user_id, mensaje, docs_normalizados, top_k=5):
+    """
+    Realiza búsqueda vectorial en Redis para encontrar las páginas más relevantes.
+    
+    Args:
+        user_id: ID del usuario
+        mensaje: Pregunta del usuario
+        docs_normalizados: Lista de doc_ids seleccionados
+        top_k: Número de mejores resultados a devolver (default: 5)
+    
+    Returns:
+        dict con user_id, message, resultados (top-K ordenados por distancia)
+    """
     import numpy as np
 
-    client = OpenAI()
     vector_consulta = generar_embedding(mensaje, model=MODEL_EMBEDDING)
-    print(f"[chat_embedding] → Vector consulta generado (dim={len(vector_consulta)})")
+    if not vector_consulta:
+        print("[chat_embedding] Error: No se pudo generar embedding para la consulta")
+        return {
+            "user_id": user_id,
+            "message": mensaje,
+            "resultados": []
+        }
+    
+    print(f"[chat_embedding] Vector consulta generado (dim={len(vector_consulta)})")
 
-    mejores_resultados = []
+    # Recolectar todos los resultados de todos los documentos
+    todos_resultados = []
 
     for doc_id in docs_normalizados:
-        patron = f"doc_raw_page:{doc_id}*"
-        claves = r.keys(patron)
-        print(f"[chat_embedding] → Buscando en Redis con patrón: {patron} → {len(claves)} claves encontradas")
-
-        mejor_dist = float("inf")
-        mejor_contenido = ""
-        mejor_clave = None
+        # Buscar solo claves con sufijo _full (páginas completas)
+        patron = f"doc_raw_page:{doc_id}:*_full"
+        claves = list(r.scan_iter(match=patron))
+        print(f"[chat_embedding] Buscando en Redis con patrón: {patron} -> {len(claves)} claves encontradas")
 
         for k in claves:
-            k = k.decode()
+            k_str = k.decode() if isinstance(k, bytes) else k
             datos = r.hgetall(k)
             if not datos:
                 continue
@@ -161,25 +177,65 @@ def run_chat_embedding(user_id, mensaje, docs_normalizados):
             try:
                 emb = json.loads(datos.get(b"embedding", b"[]").decode())
                 txt = datos.get(b"texto", b"").decode()
+                pagina = datos.get(b"pagina", b"0").decode()
+                tipo = datos.get(b"tipo", b"").decode()
+                
+                if not emb:
+                    continue
+                    
                 dist = np.linalg.norm(np.array(vector_consulta) - np.array(emb))
 
-                if dist < mejor_dist:
-                    mejor_dist = dist
-                    mejor_contenido = txt
-                    mejor_clave = k
-            except:
+                todos_resultados.append({
+                    "documento": doc_id,
+                    "clave": k_str,
+                    "distancia": float(dist),
+                    "contenido": txt,
+                    "pagina": int(pagina) if pagina.isdigit() else 0,
+                    "tipo": tipo
+                })
+            except Exception as e:
+                print(f"[chat_embedding] Error procesando clave {k_str}: {e}")
                 continue
 
-        print(f"[chat_embedding] → Mejor clave: {mejor_clave} (dist={mejor_dist:.4f})")
-        mejores_resultados.append({
-            "documento": doc_id,
-            "clave": mejor_clave,
-            "distancia": mejor_dist,
-            "contenido": mejor_contenido
-        })
+    # Ordenar por distancia (menor es mejor) y tomar top-K
+    todos_resultados.sort(key=lambda x: x["distancia"])
+    mejores_resultados = todos_resultados[:top_k]
+    
+    print(f"[chat_embedding] Total resultados encontrados: {len(todos_resultados)}, devolviendo top-{top_k}")
+    for i, res in enumerate(mejores_resultados):
+        print(f"[chat_embedding]   #{i+1}: doc={res['documento']}, pag={res['pagina']}, dist={res['distancia']:.4f}")
 
     return {
         "user_id": user_id,
         "message": mensaje,
         "resultados": mejores_resultados
     }
+
+
+def get_doc_pdf_filename(doc_id):
+    """
+    Obtiene el nombre del archivo PDF original desde Redis.
+    
+    Args:
+        doc_id: ID del documento
+    
+    Returns:
+        str: nombre del archivo PDF o None si no se encuentra
+    """
+    try:
+        doc_data = r.hgetall(f"doc_raw:{doc_id}")
+        if doc_data:
+            filename = doc_data.get(b"filename", b"").decode()
+            nombre_original = doc_data.get(b"nombre_original", b"").decode()
+            # Preferir nombre_original si tiene extensión .pdf
+            if nombre_original and nombre_original.lower().endswith(".pdf"):
+                return nombre_original
+            if filename:
+                # Agregar .pdf si no lo tiene
+                if not filename.lower().endswith(".pdf"):
+                    return f"{filename}.pdf"
+                return filename
+        return None
+    except Exception as e:
+        print(f"[chat_embedding] Error obteniendo filename para {doc_id}: {e}")
+        return None
