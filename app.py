@@ -1,5 +1,5 @@
 import os
-from flask import Flask, render_template
+from flask import Flask, render_template, jsonify
 import config
 
 print("[app] 🚀 Iniciando aplicación Flask")
@@ -11,7 +11,7 @@ app = Flask(__name__, static_folder='static', template_folder='templates')
 from routes.extraction import extraction_bp
 from routes.chat import chat_bp
 from routes.chat_embedding import chat_embedding_bp
-from services.licitacion_service import obtener_licitacion_por_id, obtener_items_por_licitacion
+from services.licitacion_service import obtener_licitacion_por_id, obtener_items_por_licitacion, obtener_todas_las_licitaciones
 
 
 app.register_blueprint(extraction_bp)
@@ -36,6 +36,22 @@ def serve_archivos_texto(subpath):
 def licitaciones():
     print("[app] 📋 Renderizando licitaciones.html")
     return render_template("licitaciones.html")
+
+@app.route('/api/licitaciones')
+def api_licitaciones():
+    print("[app] 📋 API: Obteniendo licitaciones desde PostgreSQL")
+    licitaciones_list = obtener_todas_las_licitaciones()
+    result = []
+    for lic in licitaciones_list:
+        result.append({
+            'id': str(lic['id']),
+            'codigo_licitacion': lic['codigo_licitacion'],
+            'nombre': lic['nombre'],
+            'descripcion': lic['descripcion'],
+            'fecha_carga': lic['fecha_carga'].isoformat() if lic['fecha_carga'] else None,
+            'estado': lic['estado']
+        })
+    return jsonify(result)
 
 
 @app.route('/detalle_licitacion/<uuid:licitacion_id>')

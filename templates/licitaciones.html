@@ -63,12 +63,12 @@
     <div class="filters-bar">
       <div class="filter-group">
         <label>Buscar por nombre</label>
-        <input type="text" id="filter-nombre" placeholder="Nombre archivo original">
+        <input type="text" id="filter-nombre" placeholder="Nombre de licitación">
       </div>
 
       <div class="filter-group">
-        <label>Buscar por archivo JSON</label>
-        <input type="text" id="filter-json" placeholder="Archivo JSON">
+        <label>Buscar por código</label>
+        <input type="text" id="filter-json" placeholder="Código de licitación">
       </div>
 
       <div class="filter-group">
@@ -91,9 +91,9 @@
       <table id="licitaciones-table" class="styled-table">
         <thead>
           <tr>
-            <th>Original</th>
-            <th>Archivo JSON</th>
-            <th>Total Páginas</th>
+            <th>Nombre</th>
+            <th>Código</th>
+            <th>Estado</th>
             <th>Fecha</th>
             <th>Acción</th>
           </tr>
@@ -122,15 +122,15 @@
 
     function applyFilters() {
       const nombre = document.getElementById('filter-nombre').value.toLowerCase();
-      const json = document.getElementById('filter-json').value.toLowerCase();
+      const codigo = document.getElementById('filter-json').value.toLowerCase();
 
       filteredDocs = allDocs.filter(d => {
-        const nombreOriginal = (d.nombre_original || d.nombreOriginal || d.filename || '').toLowerCase();
-        const filename = (d.filename || '').toLowerCase();
+        const nombreLic = (d.nombre || '').toLowerCase();
+        const codigoLic = (d.codigo_licitacion || '').toLowerCase();
 
         return (
-          nombreOriginal.includes(nombre) &&
-          filename.includes(json)
+          nombreLic.includes(nombre) &&
+          codigoLic.includes(codigo)
         );
       });
 
@@ -153,12 +153,12 @@
       docsToShow.forEach(d => {
         const tr = document.createElement('tr');
         tr.innerHTML = `
-          <td style="min-width:260px">${d.nombre_original || d.nombreOriginal || d.filename || '—'}</td>
-          <td style="min-width:220px">${d.filename || '—'}</td>
-          <td>${d.pages_count || d.pagesCount || '-'}</td>
-          <td>${d.timestamp || '-'}</td>
+          <td style="min-width:260px">${d.nombre || d.nombre_original || d.nombreOriginal || d.filename || '—'}</td>
+          <td style="min-width:220px">${d.codigo_licitacion || d.filename || '—'}</td>
+          <td>${d.estado || d.pages_count || d.pagesCount || '-'}</td>
+          <td>${d.fecha_carga || d.timestamp || '-'}</td>
           <td>
-            <a href="/detalle_licitacion" class="btn">Ver detalle</a>
+            <a href="/detalle_licitacion/${d.id}" class="btn">Ver detalle</a>
           </td>
         `;
         tbody.appendChild(tr);
@@ -209,8 +209,8 @@
       applyFilters();
     });
 
-    // Carga inicial
-    fetch('/api/doc_raw')
+    // Carga inicial desde PostgreSQL
+    fetch('/api/licitaciones')
       .then(res => res.json())
       .then(docs => {
         allDocs = docs;
