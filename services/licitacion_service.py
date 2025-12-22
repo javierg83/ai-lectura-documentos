@@ -52,16 +52,33 @@ def obtener_todas_las_licitaciones():
     return licitaciones
 
 def obtener_items_por_licitacion(licitacion_id):
+    """
+    Obtiene los ítems asociados a una licitación desde la tabla items_licitados.
+    Filtra por el semantic_run actual (is_current=true) para mostrar solo la extracción vigente.
+    Genera nro_item usando row_number() para mantener compatibilidad con el template.
+    """
     conn = get_db_connection()
     cursor = conn.cursor()
+    
+    # Consultar items_licitados con filtro por semantic_run actual
+    # Usar row_number() para generar nro_item ya que la tabla no tiene ese campo
     cursor.execute("""
-        SELECT nro_item, producto, cantidad, unidad, descripcion
-        FROM licitacion_items
-        WHERE licitacion_id = %s
-        ORDER BY nro_item
+        SELECT 
+            ROW_NUMBER() OVER (ORDER BY il.creado_en) as nro_item,
+            il.nombre_item as producto,
+            il.cantidad,
+            il.unidad,
+            il.descripcion
+        FROM items_licitados il
+        INNER JOIN semantic_runs sr ON il.semantic_run_id = sr.id
+        WHERE il.licitacion_id = %s
+          AND sr.is_current = true
+          AND sr.concepto = 'ITEMS_LICITACION'
+        ORDER BY il.creado_en
     """, (str(licitacion_id),))
     rows = cursor.fetchall()
     conn.close()
+    
     return [
         {
             "nro_item": row[0],
