@@ -167,95 +167,42 @@
 
 <!-- ================= ÍTEMS ================= -->
 <h2>4. Ítems Solicitados (Sección Crítica)</h2>
-<div class="form-section">
 
-<table>
-    <thead>
-        <tr>
-            <th>Línea</th>
-            <th>N° Ítem</th>
-            <th>Cantidad</th>
-            <th>Unidad</th>
-            <th>Nombre del ítem</th>
-            <th>Ficha técnica</th>
-            <th>Características técnicas declaradas</th>
-            <th>Detalle técnico</th>
-        </tr>
-    </thead>
-    <tbody>
-        <tr>
-            <td>1</td>
-            <td>1</td>
-            <td>1</td>
-            <td>Unidad</td>
-            <td>Juego modular infantil alto tráfico</td>
-            <td>N°1</td>
-            <td class="yes">Sí</td>
-            <td>
-                Plástico LLDPE roto-moldeado, postes galvanizados, capacidad mínima 20 niños,
-                área de seguridad definida, certificaciones ISO 9001, 14001, 18001, GS-TUV, EN-71.
-            </td>
-        </tr>
-        <tr>
-            <td>2</td>
-            <td>2</td>
-            <td>2</td>
-            <td>Unidades</td>
-            <td>Pasamanos superior calistenia</td>
-            <td>N°2</td>
-            <td class="yes">Sí</td>
-            <td>
-                Estructura acero galvanizado, tubos Ø 89–114 mm, área de seguridad ≥ 12,6 m²,
-                certificaciones ISO, TUV, EN-71.
-            </td>
-        </tr>
-        <tr>
-            <td>2</td>
-            <td>3</td>
-            <td>2</td>
-            <td>Unidades</td>
-            <td>Barras paralelas calistenia</td>
-            <td>N°3</td>
-            <td class="yes">Sí</td>
-            <td>
-                Tubos galvanizados Ø 48–60 mm, dimensiones variables según modelo,
-                área de seguridad ≥ 10,6 m².
-            </td>
-        </tr>
-        <tr>
-            <td>2</td>
-            <td>4</td>
-            <td>2</td>
-            <td>Unidades</td>
-            <td>Barras altas de flexiones</td>
-            <td>N°4</td>
-            <td class="yes">Sí</td>
-            <td>
-                Tubos principales Ø 89–114 mm, estructura secundaria Ø 32–48 mm,
-                soldaduras MIG anticorrosión.
-            </td>
-        </tr>
-        <tr>
-            <td>2</td>
-            <td>5</td>
-            <td>1</td>
-            <td>Unidad</td>
-            <td>Circuito completo de calistenia</td>
-            <td>N°5</td>
-            <td class="yes">Sí</td>
-            <td>
-                Circuito con escaleras, barras superiores e inferiores,
-                área seguridad mínima 9 × 3 m, certificaciones ISO, TUV, EN-71.
-            </td>
-        </tr>
-    </tbody>
-</table>
 
-<p class="footer-note">
-    ⚠️ Todos los ítems declaran características técnicas obligatorias según bases administrativas.
-</p>
-
+<div class="row mt-5">
+  <div class="col-12">
+    <h4>Ítems Solicitados</h4>
+    {% if items %}
+    <div class="table-responsive">
+      <table class="table table-bordered table-striped mt-3">
+        <thead class="table-light">
+          <tr>
+            <th style="width:5%">N°</th>
+            <th style="width:25%">Producto / Servicio</th>
+            <th style="width:10%">Cantidad</th>
+            <th style="width:10%">Unidad</th>
+            <th style="width:50%">Descripción</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for item in items %}
+          <tr>
+            <td>{{ item.nro_item }}</td>
+            <td>{{ item.producto }}</td>
+            <td>{{ item.cantidad }}</td>
+            <td>{{ item.unidad }}</td>
+            <td>{{ item.descripcion }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+      <p>No hay ítems asociados a esta licitación.</p>
+    {% endif %}
+  </div>
 </div>
+
 
 <!-- ================= CRITERIOS ================= -->
 <h2>5. Criterios de Evaluación</h2>

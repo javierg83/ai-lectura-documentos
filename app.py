@@ -11,6 +11,8 @@ app = Flask(__name__, static_folder='static', template_folder='templates')
 from routes.extraction import extraction_bp
 from routes.chat import chat_bp
 from routes.chat_embedding import chat_embedding_bp
+from services.licitacion_service import obtener_licitacion_por_id, obtener_items_por_licitacion
+
 
 app.register_blueprint(extraction_bp)
 app.register_blueprint(chat_bp)
@@ -35,11 +37,18 @@ def licitaciones():
     print("[app] 📋 Renderizando licitaciones.html")
     return render_template("licitaciones.html")
 
+
+@app.route('/detalle_licitacion/<uuid:licitacion_id>')
+def detalle_licitacion(licitacion_id):
+    licitacion = obtener_licitacion_por_id(licitacion_id)
+    items = obtener_items_por_licitacion(licitacion_id)
+    return render_template('detalle_licitacion.html', licitacion=licitacion, items=items)
+
 # ✅ Ruta para detalle de licitación
-@app.route('/detalle_licitacion')
-def detalle_licitacion():
-    print("[app] 📄 Renderizando detalle_licitacion.html")
-    return render_template("detalle_licitacion.html")
+#@app.route('/detalle_licitacion')
+#def detalle_licitacion():
+#    print("[app] 📄 Renderizando detalle_licitacion.html")
+#    return render_template("detalle_licitacion.html")
 
 
 if __name__ == '__main__':

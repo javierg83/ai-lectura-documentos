@@ -3,6 +3,8 @@ from flask import Blueprint, request, jsonify, render_template
 from services.pdf_service import process_pdf
 import os
 
+from utils.file_utils import normalizar_nombre
+
 extraction_bp = Blueprint('extraction', __name__)
 
 # ✅ Vista para mostrar la página HTML de extracción
@@ -23,7 +25,13 @@ def extraer_documento():
     lista_paginas = [int(p.strip()) for p in paginas.split(",") if p.strip().isdigit()] if paginas else []
 
     nombre_archivo = archivo.filename
-    doc_id = os.path.splitext(nombre_archivo)[0]
+
+    # ==========================================================
+    # 🔑 DOC_ID CANÓNICO (NORMALIZADO UNA SOLA VEZ)
+    # ==========================================================
+    nombre_base = os.path.splitext(nombre_archivo)[0]
+    doc_id = normalizar_nombre(nombre_base)
+
     ruta_carpeta = os.path.join("archivos_texto", doc_id)
 
     if not os.path.exists(ruta_carpeta):
@@ -33,6 +41,7 @@ def extraer_documento():
     archivo.save(ruta_pdf)
 
     print(f"[pdf_service] → Archivo recibido: {nombre_archivo}")
+    print(f"[pdf_service] → doc_id normalizado: {doc_id}")
     print(f"[pdf_service] → PDF guardado en: {ruta_pdf}")
     print(f"[pdf_service] → Parámetros: read_all={read_all}, páginas específicas={lista_paginas}")
     print(f"[pdf_service] → Tipo de extracción seleccionado: {tipo_extraccion}")
@@ -54,5 +63,6 @@ def extraer_documento():
     return jsonify({
         "mensaje": "Extracción completada",
         "archivo": nombre_archivo,
+        "doc_id": doc_id,
         "total_paginas": total_paginas
     })

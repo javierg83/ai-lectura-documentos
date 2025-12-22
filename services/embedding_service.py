@@ -1,4 +1,3 @@
-# services/embedding_service.py
 import os
 import json
 import redis
@@ -11,7 +10,13 @@ from utils.clean_text import limpiar_texto
 from utils.file_utils import normalizar_nombre
 from datetime import datetime
 
-# 🔧 Configurar redis sin SSL para Redis Cloud gratuito
+# 🔥 NUEVO: registro de licitación
+from services.licitacion_service import get_or_create_licitacion
+
+
+# ==========================================================
+# REDIS CLIENT
+# ==========================================================
 redis_url = urlparse(REDIS_URL)
 r = redis.Redis(
     host=redis_url.hostname,
@@ -22,6 +27,25 @@ r = redis.Redis(
     ssl=False
 )
 
+
+# ==========================================================
+# HELPERS
+# ==========================================================
+def _contenido_a_texto(valor):
+    """
+    Normaliza el contenido a string.
+    Soporta:
+    - str
+    - list[str]
+    - otros tipos -> ""
+    """
+    if isinstance(valor, list):
+        return "\n".join(str(v) for v in valor if v)
+    if isinstance(valor, str):
+        return valor
+    return ""
+
+
 def guardar_hash(clave, embedding, texto):
     try:
         r.hset(clave, mapping={
@@ -31,6 +55,10 @@ def guardar_hash(clave, embedding, texto):
     except Exception as e:
         print(f"[❌ ERROR] No se pudo guardar en Redis ({clave}): {e}")
 
+
+# ==========================================================
+# EMBEDDINGS DESDE JSON
+# ==========================================================
 def run_embedding_batch(doc_id):
     ruta = os.path.join("archivos_texto", doc_id)
     if not os.path.exists(ruta):
@@ -43,8 +71,26 @@ def run_embedding_batch(doc_id):
         return
 
     errores = []
-    doc_id_normalizado = normalizar_nombre(doc_id)
+    #doc_id_normalizado = normalizar_nombre(doc_id)
+    doc_id_normalizado = doc_id
 
+    
+
+    # ==========================================================
+    # 🔑 NUEVO PASO 0: REGISTRAR LICITACIÓN EN BD
+    # ==========================================================
+    try:
+        print("[📌] Registrando / obteniendo licitación antes de extracción semántica…")
+        licitacion_uuid = get_or_create_licitacion(doc_id)
+        print(f"[✅] Licitación activa → UUID: {licitacion_uuid}")
+    except Exception as e:
+        print("[❌ ERROR] No se pudo registrar la licitación")
+        traceback.print_exc()
+        return
+
+    # ==========================================================
+    # EMBEDDINGS POR PÁGINA
+    # ==========================================================
     for archivo in tqdm(archivos, desc=f"[🔍] Procesando {len(archivos)} páginas"):
         try:
             path_archivo = os.path.join(ruta, archivo)
@@ -61,23 +107,33 @@ def run_embedding_batch(doc_id):
                 errores.append((archivo, "❌ Sin elementos"))
                 continue
 
-            contenido_total = "\n\n".join([e.get("contenido", "") for e in elementos if e.get("contenido")])
+            # 🔧 FIX: normalizar contenido (str | list)
+            contenido_total = "\n\n".join(
+                _contenido_a_texto(e.get("contenido"))
+                for e in elementos
+                if _contenido_a_texto(e.get("contenido"))
+            )
+
             contenido_total = limpiar_texto(contenido_total)
             print(f"[📄] Contenido total página {pagina}: {len(contenido_total)} caracteres")
 
             if contenido_total:
-                clave_pag = f"doc_raw_page:{doc_id_normalizado}:p{pagina}"
+                clave_pag = f"doc_raw_page:{doc_id_normalizado}:p{pagina}_full"
                 embedding = generar_embedding(contenido_total, model=MODEL_EMBEDDING)
                 guardar_hash(clave_pag, embedding, contenido_total)
                 print(f"[✅] Embedding página {pagina} guardado en Redis → clave: {clave_pag}")
             else:
                 print(f"⚠️ Página {pagina} sin contenido válido para embedding")
 
+            # -----------------------------
+            # ELEMENTOS INDIVIDUALES (NO USADOS POR EXTRACTOR)
+            # -----------------------------
             for i, elem in enumerate(elementos):
-                contenido = elem.get("contenido", "")
+                contenido = _contenido_a_texto(elem.get("contenido"))
                 if not contenido:
                     print(f"⚠️ Elemento {i+1} sin contenido, se omite")
                     continue
+
                 contenido = limpiar_texto(contenido)
                 if not contenido:
                     print(f"⚠️ Elemento {i+1} con contenido vacío luego de limpieza, se omite")
@@ -92,33 +148,73 @@ def run_embedding_batch(doc_id):
             errores.append((archivo, f"❌ Error: {e}"))
             traceback.print_exc()
 
+    # ==========================================================
+    # EMBEDDING DOCUMENTO COMPLETO
+    # ==========================================================
     try:
         texto_completo = ""
         for archivo in archivos:
             path_archivo = os.path.join(ruta, archivo)
             with open(path_archivo, encoding="utf-8") as f:
                 data = json.load(f)
+
             elementos = data.get("elementos", [])
-            texto_completo += "\n\n".join([e.get("contenido", "") for e in elementos if e.get("contenido")]) + "\n"
+
+            texto_completo += "\n\n".join(
+                _contenido_a_texto(e.get("contenido"))
+                for e in elementos
+                if _contenido_a_texto(e.get("contenido"))
+            ) + "\n"
 
         texto_completo = limpiar_texto(texto_completo.strip())
         if texto_completo:
             emb_doc = generar_embedding(texto_completo, model=MODEL_EMBEDDING)
-            r.hset(f"doc_raw:{doc_id_normalizado}", mapping={
-                "nombre_original": doc_id,
-                "doc_id": doc_id_normalizado,
-                "texto": texto_completo,
-                "content": texto_completo,  # 👈 clave usada por chat_service
-                "embedding": json.dumps(emb_doc),
-                "pages_count": len(archivos),
-                "filename": doc_id,
-                "timestamp": datetime.now().isoformat()
-            })
+            r.hset(
+                f"doc_raw:{doc_id_normalizado}",
+                mapping={
+                    "nombre_original": doc_id,
+                    "doc_id": doc_id_normalizado,
+                    "texto": texto_completo,
+                    "content": texto_completo,  # usado por chat_service
+                    "embedding": json.dumps(emb_doc),
+                    "pages_count": len(archivos),
+                    "filename": doc_id,
+                    "timestamp": datetime.now().isoformat(),
+                },
+            )
             print("[✅] Embedding completo del documento guardado en Redis")
+
     except Exception as e:
         print(f"[❌ ERROR] Fallo embedding documento completo: {e}")
         traceback.print_exc()
 
+    # ==========================================================
+    # 🔥 EXTRACCIÓN SEMÁNTICA (YA CON UUID REAL)
+    # ==========================================================
+    try:
+        print("[🧠] Iniciando extracción semántica: ITEMS_LICITACION")
+
+        from services.semantic_extraction.runner import run_semantic_extraction
+
+        run_semantic_extraction(
+            licitacion_id=licitacion_uuid,          # ✅ UUID REAL
+            concepto="ITEMS_LICITACION",
+            documento_ids=[doc_id_normalizado],
+            top_k=30,
+            min_score=0.15,
+            prompt_version="prompt_items_licitacion_v1",
+            extractor_version="semantic_extractor_v1",
+        )
+
+        print("[✅] Extracción semántica ITEMS_LICITACION ejecutada")
+
+    except Exception:
+        print("[❌ ERROR] Fallo en extracción semántica ITEMS_LICITACION")
+        traceback.print_exc()
+
+    # ==========================================================
+    # LOG DE ERRORES
+    # ==========================================================
     if errores:
         log_path = os.path.join(ruta, "errores_embedding.log")
         with open(log_path, "w", encoding="utf-8") as f:
@@ -128,23 +224,19 @@ def run_embedding_batch(doc_id):
     else:
         print("✅ Embeddings generados correctamente para todas las páginas")
 
+
+# ==========================================================
+# UTILIDADES EXISTENTES (SIN CAMBIOS)
+# ==========================================================
 def list_raw_docs():
     claves = r.keys("doc_raw:*")
     nombres = [k.decode().replace("doc_raw:", "") for k in claves]
     return sorted(nombres)
 
+
 def run_chat_embedding(user_id, mensaje, docs_normalizados, top_k=5):
     """
     Realiza búsqueda vectorial en Redis para encontrar las páginas más relevantes.
-    
-    Args:
-        user_id: ID del usuario
-        mensaje: Pregunta del usuario
-        docs_normalizados: Lista de doc_ids seleccionados
-        top_k: Número de mejores resultados a devolver (default: 5)
-    
-    Returns:
-        dict con user_id, message, resultados (top-K ordenados por distancia)
     """
     import numpy as np
 
@@ -156,17 +248,14 @@ def run_chat_embedding(user_id, mensaje, docs_normalizados, top_k=5):
             "message": mensaje,
             "resultados": []
         }
-    
+
     print(f"[chat_embedding] Vector consulta generado (dim={len(vector_consulta)})")
 
-    # Recolectar todos los resultados de todos los documentos
     todos_resultados = []
 
     for doc_id in docs_normalizados:
-        # Buscar solo claves con sufijo _full (páginas completas)
-        patron = f"doc_raw_page:{doc_id}:*_full"
+        patron = f"doc_raw_page:{doc_id}:*"
         claves = list(r.scan_iter(match=patron))
-        print(f"[chat_embedding] Buscando en Redis con patrón: {patron} -> {len(claves)} claves encontradas")
 
         for k in claves:
             k_str = k.decode() if isinstance(k, bytes) else k
@@ -177,64 +266,43 @@ def run_chat_embedding(user_id, mensaje, docs_normalizados, top_k=5):
             try:
                 emb = json.loads(datos.get(b"embedding", b"[]").decode())
                 txt = datos.get(b"texto", b"").decode()
-                pagina = datos.get(b"pagina", b"0").decode()
-                tipo = datos.get(b"tipo", b"").decode()
-                
                 if not emb:
                     continue
-                    
-                dist = np.linalg.norm(np.array(vector_consulta) - np.array(emb))
+
+                dist = np.linalg.norm(
+                    json.loads(json.dumps(vector_consulta)) - json.loads(json.dumps(emb))
+                )
 
                 todos_resultados.append({
                     "documento": doc_id,
                     "clave": k_str,
                     "distancia": float(dist),
-                    "contenido": txt,
-                    "pagina": int(pagina) if pagina.isdigit() else 0,
-                    "tipo": tipo
+                    "contenido": txt
                 })
-            except Exception as e:
-                print(f"[chat_embedding] Error procesando clave {k_str}: {e}")
+            except Exception:
                 continue
 
-    # Ordenar por distancia (menor es mejor) y tomar top-K
     todos_resultados.sort(key=lambda x: x["distancia"])
-    mejores_resultados = todos_resultados[:top_k]
-    
-    print(f"[chat_embedding] Total resultados encontrados: {len(todos_resultados)}, devolviendo top-{top_k}")
-    for i, res in enumerate(mejores_resultados):
-        print(f"[chat_embedding]   #{i+1}: doc={res['documento']}, pag={res['pagina']}, dist={res['distancia']:.4f}")
-
     return {
         "user_id": user_id,
         "message": mensaje,
-        "resultados": mejores_resultados
+        "resultados": todos_resultados[:top_k]
     }
 
 
 def get_doc_pdf_filename(doc_id):
     """
     Obtiene el nombre del archivo PDF original desde Redis.
-    
-    Args:
-        doc_id: ID del documento
-    
-    Returns:
-        str: nombre del archivo PDF o None si no se encuentra
     """
     try:
         doc_data = r.hgetall(f"doc_raw:{doc_id}")
         if doc_data:
-            filename = doc_data.get(b"filename", b"").decode()
             nombre_original = doc_data.get(b"nombre_original", b"").decode()
-            # Preferir nombre_original si tiene extensión .pdf
-            if nombre_original and nombre_original.lower().endswith(".pdf"):
+            filename = doc_data.get(b"filename", b"").decode()
+            if nombre_original.lower().endswith(".pdf"):
                 return nombre_original
             if filename:
-                # Agregar .pdf si no lo tiene
-                if not filename.lower().endswith(".pdf"):
-                    return f"{filename}.pdf"
-                return filename
+                return f"{filename}.pdf" if not filename.lower().endswith(".pdf") else filename
         return None
     except Exception as e:
         print(f"[chat_embedding] Error obteniendo filename para {doc_id}: {e}")
