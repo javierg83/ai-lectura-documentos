@@ -1,32 +1,48 @@
-import csv
 import redis
+import sys
 from config import REDIS_URL
 
-def cargar_claves_a_borrar(csv_path):
-    claves = []
-    with open(csv_path, newline='', encoding='utf-8') as csvfile:
-        reader = csv.DictReader(csvfile)
-        for fila in reader:
-            clave = fila.get("clave", "").strip()
-            texto = fila.get("texto", "").strip()
-            embedding = fila.get("embedding", "").strip()
 
-            # Si falta el texto o el embedding, se considera para eliminación
-            if not texto or not embedding:
-                claves.append(clave)
-    return claves
+def borrar_doc_raw_y_paginas(nombre_archivo: str):
+    """
+    Elimina:
+    - doc_raw:{nombre_archivo}
+    - doc_raw_page:{nombre_archivo}:*
+    """
+    r = redis.Redis.from_url(REDIS_URL, decode_responses=True)
 
-def borrar_claves_en_redis(claves):
-    r = redis.Redis.from_url(REDIS_URL)
-    for clave in claves:
-        eliminado = r.delete(clave)
-        if eliminado:
+    total_borradas = 0
+
+    # 1. Borrar doc_raw
+    clave_doc_raw = f"doc_raw:{nombre_archivo}"
+    if r.delete(clave_doc_raw):
+        print(f"🗑️ Borrada clave: {clave_doc_raw}")
+        total_borradas += 1
+    else:
+        print(f"⚠️ No encontrada: {clave_doc_raw}")
+
+    # 2. Borrar doc_raw_page:*
+    patron_paginas = f"doc_raw_page:{nombre_archivo}:*"
+    claves_paginas = list(r.scan_iter(match=patron_paginas))
+
+    if not claves_paginas:
+        print(f"⚠️ No se encontraron páginas con patrón: {patron_paginas}")
+    else:
+        for clave in claves_paginas:
+            r.delete(clave)
             print(f"🗑️ Borrada clave: {clave}")
-        else:
-            print(f"⚠️ No se encontró la clave: {clave}")
+            total_borradas += 1
+
+    print(f"\n✅ Total de claves eliminadas: {total_borradas}")
+
 
 if __name__ == "__main__":
-    ruta_csv = "reporte_validacion_embeddings.csv"
-    claves = cargar_claves_a_borrar(ruta_csv)
-    print(f"🔍 Total claves a borrar: {len(claves)}")
-    borrar_claves_en_redis(claves)
+    if len(sys.argv) != 2:
+        print("❌ Uso incorrecto")
+        print("👉 python borrar_claves_redis.py <nombre_archivo>")
+        print("Ejemplo:")
+        print("👉 python borrar_claves_redis.py 08-2025-ec-visa-internacional.pdf")
+        sys.exit(1)
+
+    nombre_archivo = sys.argv[1].strip()
+    borrar_doc_raw_y_paginas(nombre_archivo)
