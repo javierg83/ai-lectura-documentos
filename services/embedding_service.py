@@ -145,7 +145,7 @@ def run_embedding_batch(doc_id):
         traceback.print_exc()
 
     try:
-        print("[🧠] Iniciando extracción semántica: ITEMS_LICITACION")
+        print("[SEMANTIC] Iniciando extraccion semantica: ITEMS_LICITACION")
         run_semantic_extraction(
             licitacion_id=licitacion_uuid,
             concepto="ITEMS_LICITACION",
@@ -155,10 +155,27 @@ def run_embedding_batch(doc_id):
             prompt_version="prompt_items_licitacion_v1.txt",
             extractor_version="semantic_extractor_v1",
         )
-        print("[✅] Extracción semántica ITEMS_LICITACION ejecutada")
+        print("[SEMANTIC] Extraccion semantica ITEMS_LICITACION ejecutada")
 
     except Exception:
-        print("[❌ ERROR] Fallo en extracción semántica ITEMS_LICITACION")
+        print("[ERROR] Fallo en extraccion semantica ITEMS_LICITACION")
+        traceback.print_exc()
+
+    try:
+        print("[SEMANTIC] Iniciando extraccion semantica: FINANZAS_LICITACION")
+        run_semantic_extraction(
+            licitacion_id=licitacion_uuid,
+            concepto="FINANZAS_LICITACION",
+            documento_ids=[doc_id_normalizado],
+            top_k=30,
+            min_score=0.15,
+            prompt_version="prompt_finanzas_licitacion_v1.txt",
+            extractor_version="semantic_extractor_v1",
+        )
+        print("[SEMANTIC] Extraccion semantica FINANZAS_LICITACION ejecutada")
+
+    except Exception:
+        print("[ERROR] Fallo en extraccion semantica FINANZAS_LICITACION")
         traceback.print_exc()
 
     if errores:

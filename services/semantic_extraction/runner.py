@@ -92,36 +92,31 @@ def run_semantic_extraction(
     extractor_version: str | None = None,
 ) -> Dict[str, Any]:
 
-    print(f"[🧠] Ejecutando extractor semántico: {concepto}")
+    print(f"[SEMANTIC] Ejecutando extractor semantico: {concepto}")
     extractor_cls = get_extractor(concepto)
-    extractor = extractor_cls(
-        licitacion_id=licitacion_id,
-        documento_ids=documento_ids,
-        top_k=top_k,
-        min_score=min_score,
-        prompt_version=prompt_version,
-        extractor_version=extractor_version,
-    )
 
-    # Paso 1: búsqueda semántica
+    # Instanciar extractor solo con licitacion_id (arquitectura BaseSemanticExtractor)
+    extractor = extractor_cls(licitacion_id=licitacion_id)
+
+    # Asignar atributos opcionales después de instanciar
+    extractor.prompt_version = prompt_version
+    extractor.extractor_version = extractor_version
+
+    # Paso 1: búsqueda semántica usando queries del extractor
     semantic_chunks = []
-    for query in extractor.build_queries():
+    queries = extractor._call_build_queries()
+    for query in queries:
         semantic_chunks.extend(_semantic_search(query, documento_ids, top_k, min_score))
 
     if not semantic_chunks:
         raise RuntimeError("No se encontraron fragmentos relevantes en Redis")
 
     context = _build_context(list({c["redis_key"]: c for c in semantic_chunks}.values()))
-    print(f"[🧠] Contexto final tiene {len(context)} caracteres")
+    print(f"[SEMANTIC] Contexto final tiene {len(context)} caracteres")
 
-    # Paso 2: llamada IA
-    prompt = extractor.build_prompt(context)
-    print(f"[📨] Prompt listo. Ejecutando LLM...")
-    raw_output = _call_llm(prompt)
-
-    print(f"[📥] Parseando output IA...")
-    parsed = extractor.parse_output(raw_output)
-    normalized = extractor.normalize(parsed)
+    # Paso 2: ejecutar extractor (build_prompt + LLM + parse + normalize)
+    print(f"[SEMANTIC] Ejecutando extractor.run()...")
+    result = extractor.run(context)
 
     print("[💾] Guardando en base de datos...")
     conn = _get_pg_conn()
@@ -147,7 +142,7 @@ def run_semantic_extraction(
         cur.execute("""
             INSERT INTO semantic_results (semantic_run_id, concepto, resultado_json)
             VALUES (%s, %s, %s)
-        """, (semantic_run_id, concepto, json.dumps(parsed)))
+        """, (semantic_run_id, concepto, json.dumps(result)))
 
         for c in semantic_chunks:
             cur.execute("""
