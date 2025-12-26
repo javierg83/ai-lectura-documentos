@@ -1,34 +1,85 @@
-# 📁 services/semantic_extraction/extractors/datos_basicos_licitacion/datos_basicos_extractor.py
+# ==============================================
+# Archivo: services/semantic_extraction/extractors/datos_basicos_licitacion/datos_basicos_extractor.py
+# ==============================================
 
-from services.semantic_extraction.extractors.base_extractor import BaseExtractor
-from services.licitacion_service import actualizar_datos_basicos_licitacion
+import logging
+from typing import Any, Dict, List
 
-class DatosBasicosLicitacionExtractor(BaseExtractor):
-    def concepto(self) -> str:
-        return "datos_basicos_licitacion"
+from services.semantic_extraction.extractors.base_extractor import BaseSemanticExtractor
+from services.semantic_extraction.extractors.datos_basicos_licitacion.schema import (
+    validate_datos_basicos_licitacion_schema
+)
+from services.semantic_extraction.extractors.datos_basicos_licitacion.normalizer import (
+    normalize_datos_basicos_licitacion
+)
 
-    def build_queries(self, texto: str) -> list[str]:
-        return [texto]
+logger = logging.getLogger(__name__)
 
-    def build_prompt(self, contexto: str) -> str:
-        return self.load_prompt("datos_basicos_licitacion/prompt_datos_basicos_licitacion_v1.txt").format(contexto=contexto)
 
-    def parse_output(self, respuesta: str) -> dict:
-        try:
-            data = self.safe_json_loads(respuesta)
-            if not isinstance(data, dict):
-                raise ValueError("La respuesta no es un diccionario JSON válido.")
-            return data
-        except Exception as e:
-            raise ValueError(f"Error al parsear salida de LLM: {e}")
+class DatosBasicosLicitacionExtractor(BaseSemanticExtractor):
+    """
+    Extractor semántico del concepto DATOS_BASICOS_LICITACION
+    """
 
-    def normalize(self, datos: dict) -> dict:
-        return {
-            "codigo_licitacion": datos.get("codigo_licitacion", "").strip(),
-            "nombre": datos.get("nombre", "").strip(),
-            "descripcion": datos.get("descripcion", "").strip(),
-            "estado": datos.get("estado", "").strip()
-        }
+    concepto = "DATOS_BASICOS_LICITACION"
 
-    def persist(self, licitacion_id: str, semantic_run_id: str, datos: dict) -> None:
-        actualizar_datos_basicos_licitacion(licitacion_id, datos)
+    def build_queries(self, licitacion_id: str) -> List[str]:
+        queries = [
+            "código de licitación",
+            "nombre de la licitación",
+            "descripción de la licitación",
+            "estado de la licitación",
+            "objeto de la licitación",
+            "identificación del proceso",
+            "número de licitación",
+            "título del proceso"
+        ]
+
+        logger.info(
+            "[DATOS_BASICOS] Queries semánticas generadas | licitacion_id=%s | queries=%s",
+            licitacion_id,
+            queries
+        )
+
+        return queries
+
+    def build_prompt(self, context: str, licitacion_id: str) -> str:
+        logger.info(
+            "[DATOS_BASICOS] Construyendo prompt | licitacion_id=%s | context_len=%s",
+            licitacion_id,
+            len(context or "")
+        )
+
+        prompt_template = self.load_prompt(
+            "datos_basicos_licitacion/prompt_datos_basicos_licitacion_v1.txt"
+        )
+
+        prompt = prompt_template.replace("{contexto}", context)
+
+        logger.debug("[DATOS_BASICOS] Prompt generado:\n%s", prompt)
+
+        return prompt
+
+    def parse_output(self, raw_output: str) -> Dict[str, Any]:
+        logger.info(
+            "[DATOS_BASICOS] Parseando salida LLM | raw_len=%s",
+            len(raw_output or "")
+        )
+
+        logger.debug("[DATOS_BASICOS] Raw output LLM:\n%s", raw_output)
+
+        data = validate_datos_basicos_licitacion_schema(raw_output)
+
+        logger.info(
+            "[DATOS_BASICOS] Schema validado correctamente | keys=%s",
+            list(data.keys())
+        )
+
+        normalized = normalize_datos_basicos_licitacion(data)
+
+        logger.debug(
+            "[DATOS_BASICOS] Resultado normalizado:\n%s",
+            normalized
+        )
+
+        return normalized

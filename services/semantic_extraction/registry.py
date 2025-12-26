@@ -6,7 +6,6 @@ from typing import Dict, Type
 
 # Interfaz base
 from services.semantic_extraction.extractors.base_extractor import BaseSemanticExtractor
-from services.semantic_extraction.extractors.datos_basicos_licitacion.datos_basicos_extractor import DatosBasicosLicitacionExtractor
 
 
 # Registro global de extractores
@@ -47,6 +46,10 @@ from services.semantic_extraction.extractors.finanzas_licitacion.finanzas_licita
     FinanzasLicitacionExtractor
 )
 
+from services.semantic_extraction.extractors.datos_basicos_licitacion.datos_basicos_extractor import (
+    DatosBasicosLicitacionExtractor
+)
+
 register_extractor("ITEMS_LICITACION", ItemsLicitacionExtractor)
 register_extractor("FINANZAS_LICITACION", FinanzasLicitacionExtractor)
-register_extractor("datos_basicos_licitacion", DatosBasicosLicitacionExtractor)
+register_extractor("DATOS_BASICOS_LICITACION", DatosBasicosLicitacionExtractor)

@@ -179,6 +179,10 @@ def run_semantic_extraction(
         elif concepto == "FINANZAS_LICITACION":
             from services.licitacion_service import guardar_finanzas_licitacion
             guardar_finanzas_licitacion(pg_conn, licitacion_id, result)
+
+        elif concepto == "DATOS_BASICOS_LICITACION":
+            from services.licitacion_service import actualizar_datos_basicos_licitacion
+            actualizar_datos_basicos_licitacion(licitacion_id, result)
     finally:
         pg_conn.close()
 
