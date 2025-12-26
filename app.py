@@ -11,8 +11,12 @@ app = Flask(__name__, static_folder='static', template_folder='templates')
 from routes.extraction import extraction_bp
 from routes.chat import chat_bp
 from routes.chat_embedding import chat_embedding_bp
-from services.licitacion_service import obtener_licitacion_por_id, obtener_items_por_licitacion, obtener_todas_las_licitaciones
-
+from services.licitacion_service import (
+    obtener_licitacion_por_id,
+    obtener_items_por_licitacion,
+    obtener_todas_las_licitaciones,
+    obtener_finanzas_por_licitacion  # ✅ nuevo
+)
 
 app.register_blueprint(extraction_bp)
 app.register_blueprint(chat_bp)
@@ -53,19 +57,15 @@ def api_licitaciones():
         })
     return jsonify(result)
 
-
+# ✅ Ruta para detalle de licitación con finanzas y fallback si no hay datos
 @app.route('/detalle_licitacion/<uuid:licitacion_id>')
 def detalle_licitacion(licitacion_id):
     licitacion = obtener_licitacion_por_id(licitacion_id)
+    if licitacion is None:
+        licitacion = {}  # ✅ fallback defensivo
     items = obtener_items_por_licitacion(licitacion_id)
-    return render_template('detalle_licitacion.html', licitacion=licitacion, items=items)
-
-# ✅ Ruta para detalle de licitación
-#@app.route('/detalle_licitacion')
-#def detalle_licitacion():
-#    print("[app] 📄 Renderizando detalle_licitacion.html")
-#    return render_template("detalle_licitacion.html")
-
+    finanzas = obtener_finanzas_por_licitacion(licitacion_id)  # ✅ nuevos datos
+    return render_template('detalle_licitacion.html', licitacion=licitacion, items=items, finanzas=finanzas)
 
 if __name__ == '__main__':
     print("[app] ✅ Flask corriendo en 0.0.0.0:5000 (debug=True)")

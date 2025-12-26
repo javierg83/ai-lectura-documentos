@@ -102,7 +102,7 @@
 <body>
 
 <h1>Detalle de Licitación</h1>
-<p><strong>Estado:</strong> Sin información</p>
+<p><strong>Estado:</strong> {{ licitacion.estado or '' }}</p>
 
 <!-- ================= CABECERA ================= -->
 <h2>1. Cabecera de la Licitación</h2>
@@ -110,19 +110,19 @@
     <div class="form-grid">
         <div class="form-group">
             <label>ID Licitación / Código</label>
-            <input class="readonly" value="Sin información" readonly>
+            <input class="readonly" value="{{ licitacion.codigo_licitacion or '' }}" readonly>
         </div>
         <div class="form-group">
             <label>Título</label>
-            <input class="readonly" value="Adquisición de juegos modulares y equipamiento deportivo de calistenia" readonly>
+            <input class="readonly" value="{{ licitacion.nombre or '' }}" readonly>
         </div>
         <div class="form-group">
             <label>Organismo</label>
-            <input class="readonly" value="Municipalidad de Huechuraba" readonly>
+            <input class="readonly" value="{{ licitacion.organismo or '' }}" readonly>
         </div>
         <div class="form-group">
             <label>Unidad solicitante</label>
-            <input class="readonly" value="Dirección de Aseo y Ornato" readonly>
+            <input class="readonly" value="{{ licitacion.unidad_solicitante or '' }}" readonly>
         </div>
     </div>
 </div>
@@ -133,19 +133,19 @@
     <div class="form-grid">
         <div class="form-group">
             <label>Presupuesto máximo</label>
-            <input class="readonly" value="$15.000.000 IVA incluido" readonly>
+            <input class="readonly" value="{{ finanzas.presupuesto_referencial or '' }}" readonly>
         </div>
         <div class="form-group">
             <label>Moneda de la oferta</label>
-            <input class="readonly" value="Pesos chilenos (SIN IVA)" readonly>
+            <input class="readonly" value="{{ finanzas.moneda or '' }}" readonly>
         </div>
         <div class="form-group">
             <label>Forma de pago</label>
-            <input class="readonly" value="Sin información" readonly>
+            <input class="readonly" value="{{ finanzas.forma_pago or '' }}" readonly>
         </div>
         <div class="form-group">
             <label>Plazo de pago</label>
-            <input class="readonly" value="Sin información" readonly>
+            <input class="readonly" value="{{ finanzas.plazo_pago or '' }}" readonly>
         </div>
     </div>
 </div>
@@ -156,19 +156,17 @@
     <div class="form-grid">
         <div class="form-group">
             <label>Garantía seriedad de la oferta</label>
-            <input class="readonly" value="No indicada" readonly>
+            <input class="readonly" value="{{ licitacion.garantia_oferta or '' }}" readonly>
         </div>
         <div class="form-group">
             <label>Garantía fiel cumplimiento</label>
-            <input class="readonly" value="No indicada" readonly>
+            <input class="readonly" value="{{ licitacion.garantia_cumplimiento or '' }}" readonly>
         </div>
     </div>
 </div>
 
 <!-- ================= ÍTEMS ================= -->
 <h2>4. Ítems Solicitados (Sección Crítica)</h2>
-
-
 <div class="row mt-5">
   <div class="col-12">
     <h4>Ítems Solicitados</h4>
@@ -187,11 +185,11 @@
         <tbody>
           {% for item in items %}
           <tr>
-            <td>{{ item.nro_item }}</td>
-            <td>{{ item.producto }}</td>
-            <td>{{ item.cantidad }}</td>
-            <td>{{ item.unidad }}</td>
-            <td>{{ item.descripcion }}</td>
+            <td>{{ loop.index }}</td>
+            <td>{{ item.nombre_item or '' }}</td>
+            <td>{{ item.cantidad or '' }}</td>
+            <td>{{ item.unidad or '' }}</td>
+            <td>{{ item.descripcion or '' }}</td>
           </tr>
           {% endfor %}
         </tbody>
@@ -203,18 +201,17 @@
   </div>
 </div>
 
-
 <!-- ================= CRITERIOS ================= -->
 <h2>5. Criterios de Evaluación</h2>
 <div class="form-section">
     <div class="form-grid">
         <div class="form-group">
             <label>Precio</label>
-            <input class="readonly" value="80%" readonly>
+            <input class="readonly" value="{{ licitacion.criterio_precio or '' }}" readonly>
         </div>
         <div class="form-group">
             <label>Plazo de entrega</label>
-            <input class="readonly" value="20%" readonly>
+            <input class="readonly" value="{{ licitacion.criterio_plazo or '' }}" readonly>
         </div>
     </div>
 </div>
@@ -222,11 +219,7 @@
 <!-- ================= OBSERVACIONES ================= -->
 <h2>6. Observaciones Generales</h2>
 <div class="form-section">
-    <textarea class="readonly" readonly>
-La licitación se adjudica por línea de producto.
-Deriva en Orden de Compra y no en contrato.
-La Municipalidad se reserva el derecho de desestimar ofertas.
-    </textarea>
+    <textarea class="readonly" readonly>{{ licitacion.observaciones or '' }}</textarea>
 </div>
 
 </body>

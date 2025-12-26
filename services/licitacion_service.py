@@ -160,3 +160,59 @@ def guardar_finanzas_licitacion(conn, licitacion_id, finanzas: dict):
             finanzas.get("fuente_financiamiento")
         ))
         conn.commit()
+
+def obtener_finanzas_por_licitacion(licitacion_id: str) -> dict | None:
+    conn = get_pg_conn()
+    cur = conn.cursor()
+    try:
+        cur.execute("""
+            SELECT presupuesto_referencial, moneda, forma_pago, plazo_pago, fuente_financiamiento
+            FROM finanzas_licitacion
+            WHERE licitacion_id = %s
+        """, (str(licitacion_id),))
+        row = cur.fetchone()
+        if not row:
+            return None
+        return {
+            "presupuesto_referencial": row[0],
+            "moneda": row[1],
+            "forma_pago": row[2],
+            "plazo_pago": row[3],
+            "fuente_financiamiento": row[4]
+        }
+    finally:
+        cur.close()
+        conn.close()
+
+
+def actualizar_datos_basicos_licitacion(licitacion_id: str, datos: dict) -> None:
+    """
+    Actualiza los datos básicos de una licitación existente en la base de datos.
+    No crea una nueva. Solo actualiza campos existentes si vienen en el diccionario.
+    """
+    conn = get_pg_conn()
+    cur = conn.cursor()
+    try:
+        update_fields = []
+        update_values = []
+
+        # Campos permitidos para actualizar
+        for campo in ["codigo_licitacion", "nombre", "descripcion", "estado"]:
+            if datos.get(campo) is not None:
+                update_fields.append(f"{campo} = %s")
+                update_values.append(datos[campo])
+
+        if not update_fields:
+            return  # Nada que actualizar
+
+        update_values.append(str(licitacion_id))
+        query = f"""
+            UPDATE licitaciones
+            SET {', '.join(update_fields)}
+            WHERE id = %s
+        """
+        cur.execute(query, tuple(update_values))
+        conn.commit()
+    finally:
+        cur.close()
+        conn.close()
