@@ -1,5 +1,6 @@
 import json
 import logging
+import re
 
 logger = logging.getLogger(__name__)
 
@@ -8,15 +9,30 @@ class FinanzasLicitacionSchemaError(Exception):
     pass
 
 
+def _strip_markdown_code_block(text: str) -> str:
+    """
+    Elimina bloques de codigo markdown (```json ... ``` o ``` ... ```)
+    que el LLM a veces incluye en su respuesta.
+    """
+    text = text.strip()
+    pattern = r"^```(?:json)?\s*\n?(.*?)\n?```$"
+    match = re.match(pattern, text, re.DOTALL)
+    if match:
+        return match.group(1).strip()
+    return text
+
+
 def validate_finanzas_licitacion_schema(raw_output: str) -> dict:
     logger.info("[FINANZAS][SCHEMA] Validando salida LLM")
 
     if not raw_output:
-        logger.error("[FINANZAS][SCHEMA] Salida vacía del LLM")
-        raise FinanzasLicitacionSchemaError("Salida vacía del LLM")
+        logger.error("[FINANZAS][SCHEMA] Salida vacia del LLM")
+        raise FinanzasLicitacionSchemaError("Salida vacia del LLM")
+
+    cleaned_output = _strip_markdown_code_block(raw_output)
 
     try:
-        data = json.loads(raw_output)
+        data = json.loads(cleaned_output)
     except json.JSONDecodeError as e:
         logger.error(
             "[FINANZAS][SCHEMA] JSON inválido | error=%s | raw=%s",

@@ -5,11 +5,19 @@
 import json
 import os
 import traceback
+from datetime import datetime
 from typing import Any, Dict, List
 from urllib.parse import urlparse
 
 import psycopg2
 import redis
+
+
+def _json_serial(obj):
+    """Serializador JSON para objetos datetime."""
+    if isinstance(obj, datetime):
+        return obj.isoformat()
+    raise TypeError(f"Object of type {type(obj).__name__} is not JSON serializable")
 
 from config import REDIS_URL, MODEL_EMBEDDING
 from embeddings import generar_embedding
@@ -142,7 +150,7 @@ def run_semantic_extraction(
         cur.execute("""
             INSERT INTO semantic_results (semantic_run_id, concepto, resultado_json)
             VALUES (%s, %s, %s)
-        """, (semantic_run_id, concepto, json.dumps(result)))
+        """, (semantic_run_id, concepto, json.dumps(result, default=_json_serial)))
 
         for c in semantic_chunks:
             cur.execute("""
