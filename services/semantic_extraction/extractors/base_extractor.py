@@ -2,7 +2,9 @@
 # Archivo: services/semantic_extraction/extractors/base_extractor.py
 # ==============================================
 
+import inspect
 import logging
+import os
 from abc import ABC, abstractmethod
 from typing import List, Optional
 from datetime import datetime
@@ -33,6 +35,10 @@ class BaseSemanticExtractor(ABC):
     def __init__(self, licitacion_id: str):
         self.licitacion_id = licitacion_id
 
+        # Atributos opcionales que el runner puede asignar después de instanciar
+        self.prompt_version: Optional[str] = None
+        self.extractor_version: Optional[str] = None
+
         # Control de ejecución (evita loops)
         self._has_run = False
         self._started_at: Optional[datetime] = None
@@ -43,6 +49,31 @@ class BaseSemanticExtractor(ABC):
             self.concepto,
             self.licitacion_id
         )
+
+    # ======================================================
+    # Métodos auxiliares para carga de prompts
+    # ======================================================
+
+    def load_prompt(self, relative_path: str) -> str:
+        """
+        Carga un archivo de prompt desde services/semantic_extraction/prompts/
+        """
+        base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        prompt_path = os.path.join(base_dir, "prompts", relative_path)
+
+        logger.debug("[BASE_EXTRACTOR] Cargando prompt desde: %s", prompt_path)
+
+        with open(prompt_path, "r", encoding="utf-8") as f:
+            return f.read()
+
+    def _load_prompt_template(self) -> str:
+        """
+        Carga el prompt por defecto basado en el concepto del extractor.
+        Convención: prompts/{concepto_lower}/prompt_{concepto_lower}_v1.txt
+        """
+        concepto_lower = (self.concepto or "").lower()
+        relative_path = f"{concepto_lower}/prompt_{concepto_lower}_v1.txt"
+        return self.load_prompt(relative_path)
 
     # ======================================================
     # Métodos a implementar por extractores concretos
@@ -60,9 +91,44 @@ class BaseSemanticExtractor(ABC):
     def parse_output(self, raw_output: str):
         raise NotImplementedError
 
+    def normalize(self, parsed_output):
+        """
+        Método de normalización por defecto. Los extractores pueden sobrescribirlo.
+        Por defecto retorna el output tal cual.
+        """
+        return parsed_output
+
     # ======================================================
     # Ejecución principal (invocada por runner)
     # ======================================================
+
+    def _call_build_prompt(self, context: str) -> str:
+        """
+        Llama a build_prompt de forma flexible según la firma del método concreto.
+        Soporta tanto build_prompt(context) como build_prompt(context, licitacion_id).
+        """
+        sig = inspect.signature(self.build_prompt)
+        params = list(sig.parameters.keys())
+
+        # Si el método acepta 2 parámetros (context, licitacion_id)
+        if len(params) >= 2:
+            return self.build_prompt(context, self.licitacion_id)
+        # Si solo acepta 1 parámetro (context)
+        return self.build_prompt(context)
+
+    def _call_build_queries(self) -> List[str]:
+        """
+        Llama a build_queries de forma flexible según la firma del método concreto.
+        Soporta tanto build_queries() como build_queries(licitacion_id).
+        """
+        sig = inspect.signature(self.build_queries)
+        params = list(sig.parameters.keys())
+
+        # Si el método acepta 1 parámetro (licitacion_id)
+        if len(params) >= 1:
+            return self.build_queries(self.licitacion_id)
+        # Si no acepta parámetros
+        return self.build_queries()
 
     def run(self, context: str):
         if self._has_run:
@@ -77,14 +143,14 @@ class BaseSemanticExtractor(ABC):
         self._started_at = datetime.utcnow()
 
         logger.info(
-            "[SEMANTIC][%s] ▶️ Inicio extracción | licitacion_id=%s | context_len=%s",
+            "[SEMANTIC][%s] Inicio extraccion | licitacion_id=%s | context_len=%s",
             self.concepto,
             self.licitacion_id,
             len(context or "")
         )
 
-        # Prompt
-        prompt = self.build_prompt(context, self.licitacion_id)
+        # Prompt (llamada flexible)
+        prompt = self._call_build_prompt(context)
 
         logger.debug(
             "[SEMANTIC][%s] Prompt construido | len=%s",
@@ -97,8 +163,8 @@ class BaseSemanticExtractor(ABC):
         raw_output = run_llm_raw(prompt)
 
         if not raw_output:
-            logger.error("[SEMANTIC][%s] Salida vacía del LLM", self.concepto)
-            raise RuntimeError("Salida vacía del LLM")
+            logger.error("[SEMANTIC][%s] Salida vacia del LLM", self.concepto)
+            raise RuntimeError("Salida vacia del LLM")
 
         logger.debug(
             "[SEMANTIC][%s] Raw output:\n%s",
@@ -107,12 +173,15 @@ class BaseSemanticExtractor(ABC):
         )
 
         # Parseo
-        result = self.parse_output(raw_output)
+        parsed = self.parse_output(raw_output)
+
+        # Normalización
+        result = self.normalize(parsed)
 
         self._finished_at = datetime.utcnow()
 
         logger.info(
-            "[SEMANTIC][%s] ✅ Extracción finalizada | duracion_ms=%s",
+            "[SEMANTIC][%s] Extraccion finalizada | duracion_ms=%s",
             self.concepto,
             int((self._finished_at - self._started_at).total_seconds() * 1000)
         )
