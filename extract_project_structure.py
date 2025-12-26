@@ -360,22 +360,48 @@ def read_dependency_overview(root: str) -> Dict[str, Any]:
     return data
 
 def make_tree_markdown(items: List[Dict[str, Any]]) -> str:
-    dirs = {it["relpath"] for it in items if it["type"] == "dir"}
-    files = [it for it in items if it["type"] == "file"]
-    lines: List[str] = []
+    from collections import defaultdict
 
-    def depth(p: str) -> int:
-        return 0 if p in ("", ".") else p.count("/")
+    tree = {}
 
-    for d in sorted(dirs, key=lambda p: (depth(p), p)):
-        base = os.path.basename(d) if d else "."
-        indent = "  " * depth(d)
-        label = base if d else os.path.basename(os.getcwd())
-        lines.append(f"{indent}📁 {label}/")
-        subfiles = [f for f in files if os.path.dirname(f["relpath"]).replace("\\", "/") == (d if d != "" else "")]
-        for f in sorted(subfiles, key=lambda i: i["name"].lower()):
-            lines.append(f"{indent}  └─ 📄 {f['name']}")
-    return "\n".join(lines)
+    def insert_path(path: str, entry: Dict[str, Any]):
+        parts = path.strip("/").split("/")
+        node = tree
+        for part in parts[:-1]:
+            node = node.setdefault(part + "/", {})
+        # Si está en raíz, usar clave especial "__root__"
+        key = "__root__" if len(parts) == 1 else "__files__"
+        node.setdefault(key, []).append(entry)
+
+    # Insertar archivos
+    for item in items:
+        if item["type"] == "file":
+            insert_path(item["relpath"], item)
+
+    # Insertar carpetas explícitamente
+    for item in items:
+        if item["type"] == "dir":
+            parts = item["relpath"].strip("/").split("/")
+            node = tree
+            for part in parts:
+                node = node.setdefault(part + "/", {})
+
+    # Render recursivo
+    def render(node, indent=""):
+        lines = []
+        if "__root__" in node:
+            for f in sorted(node["__root__"], key=lambda x: x["name"].lower()):
+                lines.append(f"{indent}  └─ 📄 {f['name']}")
+        for key in sorted(k for k in node if k not in {"__files__", "__root__"}):
+            lines.append(f"{indent}📁 {key}")
+            lines.extend(render(node[key], indent + "  "))
+        if "__files__" in node:
+            for f in sorted(node["__files__"], key=lambda x: x["name"].lower()):
+                lines.append(f"{indent}  └─ 📄 {f['name']}")
+        return lines
+
+    return "\n".join(render(tree))
+
 
 def summarize_item_brief(it: Dict[str, Any]) -> str:
     parts = []
