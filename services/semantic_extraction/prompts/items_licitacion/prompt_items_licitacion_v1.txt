@@ -82,10 +82,8 @@ FORMATO DE SALIDA (JSON ESTRICTO)
 
 {
   "concepto": "ITEMS_LICITACION",
-  "licitacion": {
-    "licitacion_id": "{LICITACION_ID}",
-    "codigo_licitacion": null
-  },
+  "licitacion_id": "{LICITACION_ID}",
+  "codigo_licitacion": null,
   "resumen": {
     "total_items_detectados": 0,
     "observaciones": null

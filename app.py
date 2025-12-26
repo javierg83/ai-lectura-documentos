@@ -48,7 +48,7 @@ def api_licitaciones():
             'codigo_licitacion': lic['codigo_licitacion'],
             'nombre': lic['nombre'],
             'descripcion': lic['descripcion'],
-            'fecha_carga': lic['fecha_carga'].isoformat() if lic['fecha_carga'] else None,
+            'fecha_carga': lic['fecha_carga'],
             'estado': lic['estado']
         })
     return jsonify(result)
