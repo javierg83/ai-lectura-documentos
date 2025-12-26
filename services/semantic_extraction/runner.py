@@ -171,14 +171,16 @@ def run_semantic_extraction(
         conn.close()
 
     pg_conn = _get_pg_conn()
+    try:
+        if concepto == "ITEMS_LICITACION":
+            from services.licitacion_service import guardar_items_licitacion
+            guardar_items_licitacion(pg_conn, licitacion_id, semantic_run_id, result["items"])
 
-    if concepto == "ITEMS_LICITACION":
-        from services.licitacion_service import guardar_items_licitacion
-        guardar_items_licitacion(pg_conn, licitacion_id, result["items"])
-
-    elif concepto == "FINANZAS_LICITACION":
-        from services.licitacion_service import guardar_finanzas_licitacion
-        guardar_finanzas_licitacion(pg_conn, licitacion_id, result)
+        elif concepto == "FINANZAS_LICITACION":
+            from services.licitacion_service import guardar_finanzas_licitacion
+            guardar_finanzas_licitacion(pg_conn, licitacion_id, result)
+    finally:
+        pg_conn.close()
 
     return {
         "status": "OK",
