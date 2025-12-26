@@ -121,16 +121,16 @@ def get_or_create_licitacion(nombre_archivo: str) -> str:
         conn.close()
 
 
-def guardar_items_licitacion(conn, licitacion_id, items: list[dict]):
+def guardar_items_licitacion(conn, licitacion_id, semantic_run_id, items: list[dict]):
     with conn.cursor() as cur:
-        cur.execute("DELETE FROM items_licitacion WHERE licitacion_id = %s", (licitacion_id,))
+        cur.execute("DELETE FROM items_licitados WHERE semantic_run_id = %s", (semantic_run_id,))
         for item in items:
             cur.execute("""
-                INSERT INTO items_licitacion (licitacion_id, item_key, nombre_item, cantidad, unidad, descripcion)
+                INSERT INTO items_licitados (licitacion_id, semantic_run_id, nombre_item, cantidad, unidad, descripcion)
                 VALUES (%s, %s, %s, %s, %s, %s)
             """, (
                 licitacion_id,
-                item.get("item_key"),
+                semantic_run_id,
                 item.get("nombre_item"),
                 item.get("cantidad"),
                 item.get("unidad"),
@@ -149,18 +149,14 @@ def guardar_finanzas_licitacion(conn, licitacion_id, finanzas: dict):
                 moneda,
                 forma_pago,
                 plazo_pago,
-                fuente_financiamiento,
-                garantias,
-                multas
-            ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+                fuente_financiamiento
+            ) VALUES (%s, %s, %s, %s, %s, %s)
         """, (
             licitacion_id,
             finanzas.get("presupuesto_referencial"),
             finanzas.get("moneda"),
             finanzas.get("forma_pago"),
             finanzas.get("plazo_pago"),
-            finanzas.get("fuente_financiamiento"),
-            finanzas.get("garantias"),
-            finanzas.get("multas")
+            finanzas.get("fuente_financiamiento")
         ))
         conn.commit()
