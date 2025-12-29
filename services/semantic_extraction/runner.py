@@ -1,6 +1,6 @@
-# ==============================================
-# Archivo: services/semantic_extraction/runner.py (con logs detallados)
-# ==============================================
+# ==========================================================
+# Archivo: services/semantic_extraction/runner.py (ACTUALIZADO Y COMPLETO)
+# ==========================================================
 
 import json
 import os
@@ -8,20 +8,21 @@ import traceback
 from datetime import datetime
 from typing import Any, Dict, List
 from urllib.parse import urlparse
+import re
 
 import psycopg2
 import redis
 
-
-def _json_serial(obj):
-    """Serializador JSON para objetos datetime."""
-    if isinstance(obj, datetime):
-        return obj.isoformat()
-    raise TypeError(f"Object of type {type(obj).__name__} is not JSON serializable")
-
 from config import REDIS_URL, MODEL_EMBEDDING
 from embeddings import generar_embedding
 from services.semantic_extraction.registry import get_extractor
+
+MODO_DEBUG = False
+
+def _json_serial(obj):
+    if isinstance(obj, datetime):
+        return obj.isoformat()
+    raise TypeError(f"Object of type {type(obj).__name__} is not JSON serializable")
 
 redis_url = urlparse(REDIS_URL)
 redis_client = redis.Redis(
@@ -39,7 +40,6 @@ def _get_pg_conn():
     if not DATABASE_URL:
         raise RuntimeError("DATABASE_URL no está definido en el entorno")
     return psycopg2.connect(DATABASE_URL)
-
 
 def _semantic_search(query: str, documento_ids: List[str], top_k: int, min_score: float) -> List[Dict[str, Any]]:
     import numpy as np
@@ -76,24 +76,36 @@ def _semantic_search(query: str, documento_ids: List[str], top_k: int, min_score
     print(f"[🔍] Resultados encontrados para query '{query}': {len(resultados)}")
     return resultados[:top_k]
 
-
 def _build_context(chunks: List[Dict[str, Any]]) -> str:
     bloques = []
     for c in chunks:
         bloques.append(f"[REDIS_KEY={c['redis_key']}]\n{c['texto']}")
     return "\n\n---\n\n".join(bloques)
 
-
 def _call_llm(prompt: str) -> str:
     from services.llm_service import run_llm_raw
     return run_llm_raw(prompt)
 
+def _sanitize(text):
+    text = re.sub(r"[^a-zA-Z0-9_-]+", "_", text.strip().lower())
+    return text or "sin_nombre"
+
+def _guardar_json_en_disco(nombre_licitacion: str, concepto: str, result: dict):
+    base_dir = os.path.join("salida_json", _sanitize(nombre_licitacion))
+    os.makedirs(base_dir, exist_ok=True)
+    timestamp = datetime.utcnow().strftime("%Y%m%d_%H%M%S")
+    nombre_archivo = f"{concepto.lower()}_{timestamp}.json"
+    path_completo = os.path.join(base_dir, nombre_archivo)
+    with open(path_completo, "w", encoding="utf-8") as f:
+        json.dump(result, f, indent=2, ensure_ascii=False, default=_json_serial)
+    print(f"[📁] Resultado guardado en: {path_completo}")
 
 def run_semantic_extraction(
     *,
     licitacion_id: str,
     concepto: str,
     documento_ids: List[str],
+    nombre_licitacion: str = "sin_nombre",
     top_k: int = 30,
     min_score: float = 0.25,
     prompt_version: str | None = None,
@@ -102,15 +114,10 @@ def run_semantic_extraction(
 
     print(f"[SEMANTIC] Ejecutando extractor semantico: {concepto}")
     extractor_cls = get_extractor(concepto)
-
-    # Instanciar extractor solo con licitacion_id (arquitectura BaseSemanticExtractor)
     extractor = extractor_cls(licitacion_id=licitacion_id)
-
-    # Asignar atributos opcionales después de instanciar
     extractor.prompt_version = prompt_version
     extractor.extractor_version = extractor_version
 
-    # Paso 1: búsqueda semántica usando queries del extractor
     semantic_chunks = []
     queries = extractor._call_build_queries()
     for query in queries:
@@ -122,9 +129,27 @@ def run_semantic_extraction(
     context = _build_context(list({c["redis_key"]: c for c in semantic_chunks}.values()))
     print(f"[SEMANTIC] Contexto final tiene {len(context)} caracteres")
 
-    # Paso 2: ejecutar extractor (build_prompt + LLM + parse + normalize)
     print(f"[SEMANTIC] Ejecutando extractor.run()...")
     result = extractor.run(context)
+
+    try:
+        _guardar_json_en_disco(nombre_licitacion, concepto, result)
+    except Exception as e:
+        print(f"[⚠️] Error guardando archivo JSON en disco: {e}")
+
+    if MODO_DEBUG:
+        ts = datetime.utcnow().strftime("%Y%m%d_%H%M%S")
+        nombre_archivo = f"debug_semantic_{concepto}_{ts}.json"
+        print(f"\n[DEBUG] Resultado normalizado:\n")
+        print(json.dumps(result, indent=2, ensure_ascii=False, default=_json_serial))
+        with open(nombre_archivo, "w", encoding="utf-8") as f:
+            json.dump(result, f, indent=2, ensure_ascii=False, default=_json_serial)
+        print(f"\n[DEBUG] Resultado guardado en archivo: {nombre_archivo}")
+        return {
+            "status": "DEBUG_ONLY",
+            "concepto": concepto,
+            "mensaje": "No se escribió en base de datos",
+        }
 
     print("[💾] Guardando en base de datos...")
     conn = _get_pg_conn()
@@ -173,8 +198,10 @@ def run_semantic_extraction(
     pg_conn = _get_pg_conn()
     try:
         if concepto == "ITEMS_LICITACION":
-            from services.licitacion_service import guardar_items_licitacion
+            from services.licitacion_service import guardar_items_licitacion, guardar_especificaciones_tecnicas
             guardar_items_licitacion(pg_conn, licitacion_id, semantic_run_id, result["items"])
+            if "item_especificaciones" in result:
+                guardar_especificaciones_tecnicas(pg_conn, semantic_run_id, result["item_especificaciones"])
 
         elif concepto == "FINANZAS_LICITACION":
             from services.licitacion_service import guardar_finanzas_licitacion
@@ -182,7 +209,10 @@ def run_semantic_extraction(
 
         elif concepto == "DATOS_BASICOS_LICITACION":
             from services.licitacion_service import actualizar_datos_basicos_licitacion
-            actualizar_datos_basicos_licitacion(licitacion_id, result)
+            actualizar_datos_basicos_licitacion(
+                licitacion_id,
+                result.get("datos_basicos", {})  # <<< CAMBIO ÚNICO >>>
+            )
     finally:
         pg_conn.close()
 
@@ -192,10 +222,6 @@ def run_semantic_extraction(
         "semantic_run_id": str(semantic_run_id),
     }
 
-
-# ==========================================================
-# CLI para pruebas sobre documento ya embebido en Redis
-# ==========================================================
 if __name__ == "__main__":
     import sys
     if len(sys.argv) < 3:
@@ -212,6 +238,7 @@ if __name__ == "__main__":
             licitacion_id=lic_id,
             concepto=concepto,
             documento_ids=[doc_id],
+            nombre_licitacion=doc_id,
             top_k=30,
             min_score=0.15,
             prompt_version="prompt_items_licitacion_v1.txt",

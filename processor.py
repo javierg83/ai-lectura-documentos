@@ -1,4 +1,3 @@
-# processor.py
 import fitz  # PyMuPDF
 import base64
 import json
@@ -6,6 +5,7 @@ import os
 from ai_extractor_pdf import analyze_page_with_gpt as analizar_pagina
 from embeddings import generar_embedding
 from utils.redis_utils import guardar_en_redis
+from utils.file_utils import normalizar_nombre  # ✅ Agregado
 
 def convertir_pagina_a_base64(pdf_path, page_number):
     with fitz.open(pdf_path) as doc:
@@ -14,6 +14,8 @@ def convertir_pagina_a_base64(pdf_path, page_number):
         return base64.b64encode(pix.tobytes()).decode("utf-8")
 
 def process_pages(pdf_path, carpeta_destino, paginas_especificas, read_all, doc_id):
+    doc_id = normalizar_nombre(doc_id)  # ✅ Normalización aplicada
+
     resultados = []
     with fitz.open(pdf_path) as doc:
         total_paginas = doc.page_count

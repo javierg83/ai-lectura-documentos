@@ -67,6 +67,15 @@ class ItemsLicitacionExtractor(BaseSemanticExtractor):
 
         parsed.setdefault("licitacion_id", self.licitacion_id)
 
+        # ✅ Forzar 'pagina' a int o None si viene como string
+        for item in parsed.get("items", []):
+            for fuente in item.get("fuentes", []):
+                pagina = fuente.get("pagina")
+                if isinstance(pagina, str) and pagina.isdigit():
+                    fuente["pagina"] = int(pagina)
+                elif pagina in ("", None):
+                    fuente["pagina"] = None
+
         try:
             validate_items_licitacion_schema(parsed)
         except ItemsLicitacionSchemaError as e:

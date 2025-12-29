@@ -1,4 +1,3 @@
-# services/llm_service.py
 """
 Servicio LLM directo (sin chat, sin usuario, sin embeddings).
 Usado por extractores semánticos y procesos batch.
@@ -6,12 +5,33 @@ Usado por extractores semánticos y procesos batch.
 
 from openai import OpenAI
 import config
-
+import json
+from datetime import datetime
+import os
 
 # ==========================================================
 # OPENAI CLIENT (MISMO PATRÓN QUE chat_service.py)
 # ==========================================================
 oai = OpenAI(api_key=config.API_KEY)
+
+
+def _guardar_llm_raw_json(raw_text: str, tag: str = "llm_response"):
+    """
+    Guarda la respuesta cruda del modelo LLM como JSON para depuración.
+    """
+    ts = datetime.utcnow().strftime("%Y%m%d_%H%M%S")
+    filename = f"debug_llm_raw_{tag}_{ts}.json"
+
+    try:
+        parsed = json.loads(raw_text)
+        contenido = parsed
+    except Exception:
+        contenido = {"raw_text": raw_text}
+
+    with open(filename, "w", encoding="utf-8") as f:
+        json.dump(contenido, f, indent=2, ensure_ascii=False)
+    
+    print(f"[🧪 DEBUG] Respuesta LLM cruda guardada en: {filename}")
 
 
 def run_llm_raw(prompt: str) -> str:
@@ -53,6 +73,9 @@ def run_llm_raw(prompt: str) -> str:
         print(f"[llm_service] 📊 Tokens usados → input: {token_in}, output: {token_out}")
         print("[llm_service] 📝 Respuesta del modelo (primeros 500 chars):")
         print(reply[:500] + ("..." if len(reply) > 500 else ""))
+
+        # 🧪 Guardar respuesta cruda para debug
+        _guardar_llm_raw_json(reply, tag="items_licitacion")
 
         return reply.strip()
 

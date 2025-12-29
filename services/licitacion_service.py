@@ -1,7 +1,3 @@
-# ==============================================
-# Archivo: services/licitacion_service.py (unificado)
-# ==============================================
-
 import psycopg2
 import os
 import uuid
@@ -23,11 +19,10 @@ def obtener_licitacion_por_id(licitacion_id: str) -> dict | None:
     cur = conn.cursor()
     try:
         cur.execute("""
-            SELECT id, codigo_licitacion, nombre, descripcion, estado, fecha_carga
+            SELECT id, codigo_licitacion, nombre, descripcion, estado, organismo_solicitante, fecha_carga
             FROM licitaciones
             WHERE id = %s
-        """, (str(licitacion_id),)
-        )
+        """, (str(licitacion_id),))
         row = cur.fetchone()
         if not row:
             return None
@@ -37,7 +32,8 @@ def obtener_licitacion_por_id(licitacion_id: str) -> dict | None:
             "nombre": row[2],
             "descripcion": row[3],
             "estado": row[4],
-            "fecha_carga": row[5].isoformat() if row[5] else None
+            "organismo_solicitante": row[5],
+            "fecha_carga": row[6].isoformat() if row[6] else None
         }
     finally:
         cur.close()
@@ -73,8 +69,9 @@ def obtener_items_por_licitacion(licitacion_id: str) -> list[dict]:
     cur = conn.cursor()
     try:
         cur.execute("""
-            SELECT nombre_item, cantidad, unidad, descripcion
-            FROM items_licitados
+            SELECT nombre_item, cantidad, unidad, descripcion, observaciones,
+                   fuente_resumen, incompleto, incompleto_motivos, tiene_descripcion_tecnica
+            FROM items_licitacion
             WHERE licitacion_id = %s
             ORDER BY nombre_item
         """, (str(licitacion_id),))
@@ -84,7 +81,12 @@ def obtener_items_por_licitacion(licitacion_id: str) -> list[dict]:
                 "nombre_item": r[0],
                 "cantidad": r[1],
                 "unidad": r[2],
-                "descripcion": r[3]
+                "descripcion": r[3],
+                "observaciones": r[4],
+                "fuente_resumen": r[5],
+                "incompleto": r[6],
+                "incompleto_motivos": r[7],
+                "tiene_descripcion_tecnica": r[8],
             }
             for r in rows
         ]
@@ -93,14 +95,10 @@ def obtener_items_por_licitacion(licitacion_id: str) -> list[dict]:
         conn.close()
 
 # --------------------------------------------------
-# FUNCIÓN PARA EXTRACCIÓN SEMÁNTICA
+# FUNCIONES DE PERSISTENCIA
 # --------------------------------------------------
 
 def get_or_create_licitacion(nombre_archivo: str) -> str:
-    """
-    Crea o recupera licitación según nombre del archivo PDF.
-    Guarda el nombre como campo 'nombre' en la tabla licitaciones.
-    """
     conn = get_pg_conn()
     cur = conn.cursor()
     try:
@@ -123,19 +121,81 @@ def get_or_create_licitacion(nombre_archivo: str) -> str:
 
 def guardar_items_licitacion(conn, licitacion_id, semantic_run_id, items: list[dict]):
     with conn.cursor() as cur:
-        cur.execute("DELETE FROM items_licitados WHERE semantic_run_id = %s", (semantic_run_id,))
+        cur.execute("DELETE FROM items_licitacion WHERE semantic_run_id = %s", (semantic_run_id,))
         for item in items:
             cur.execute("""
-                INSERT INTO items_licitados (licitacion_id, semantic_run_id, nombre_item, cantidad, unidad, descripcion)
-                VALUES (%s, %s, %s, %s, %s, %s)
+                INSERT INTO items_licitacion (
+                    licitacion_id,
+                    semantic_run_id,
+                    item_key,
+                    nombre_item,
+                    cantidad,
+                    unidad,
+                    descripcion,
+                    observaciones,
+                    fuente_resumen,
+                    created_at,
+                    incompleto,
+                    incompleto_motivos,
+                    tiene_descripcion_tecnica
+                ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
             """, (
                 licitacion_id,
                 semantic_run_id,
+                item.get("item_key"),
                 item.get("nombre_item"),
                 item.get("cantidad"),
                 item.get("unidad"),
-                item.get("descripcion")
+                item.get("descripcion"),
+                item.get("observaciones"),
+                item.get("fuente_resumen"),
+                item.get("created_at") or datetime.utcnow(),
+                item.get("incompleto") or False,
+                item.get("incompleto_motivos"),
+                item.get("tiene_descripcion_tecnica") or False
             ))
+        conn.commit()
+
+
+def guardar_especificaciones_tecnicas(conn, semantic_run_id: str, especificaciones: list[dict]):
+    with conn.cursor() as cur:
+        cur.execute("DELETE FROM item_licitacion_especificaciones WHERE semantic_run_id = %s", (semantic_run_id,))
+
+        cur.execute("""
+            SELECT item_key, id
+            FROM items_licitacion
+            WHERE semantic_run_id = %s
+        """, (semantic_run_id,))
+        rows = cur.fetchall()
+        key_to_id = {r[0]: r[1] for r in rows}
+
+        errores = []
+
+        for spec in especificaciones:
+            item_key = spec.get("item_key")
+            item_id = key_to_id.get(item_key)
+
+            if not item_id:
+                errores.append(item_key)
+                continue
+
+            cur.execute("""
+                INSERT INTO item_licitacion_especificaciones (
+                    semantic_run_id,
+                    item_id,
+                    especificacion,
+                    created_at
+                ) VALUES (%s, %s, %s, %s)
+            """, (
+                semantic_run_id,
+                item_id,
+                spec.get("especificacion"),
+                spec.get("created_at") or datetime.utcnow()
+            ))
+
+        if errores:
+            raise RuntimeError(f"[❌] No se pudieron mapear las siguientes claves item_key: {errores}")
+
         conn.commit()
 
 
@@ -160,6 +220,7 @@ def guardar_finanzas_licitacion(conn, licitacion_id, finanzas: dict):
             finanzas.get("fuente_financiamiento")
         ))
         conn.commit()
+
 
 def obtener_finanzas_por_licitacion(licitacion_id: str) -> dict | None:
     conn = get_pg_conn()
@@ -186,24 +247,19 @@ def obtener_finanzas_por_licitacion(licitacion_id: str) -> dict | None:
 
 
 def actualizar_datos_basicos_licitacion(licitacion_id: str, datos: dict) -> None:
-    """
-    Actualiza los datos básicos de una licitación existente en la base de datos.
-    No crea una nueva. Solo actualiza campos existentes si vienen en el diccionario.
-    """
     conn = get_pg_conn()
     cur = conn.cursor()
     try:
         update_fields = []
         update_values = []
 
-        # Campos permitidos para actualizar
-        for campo in ["codigo_licitacion", "nombre", "descripcion", "estado"]:
+        for campo in ["codigo_licitacion", "nombre", "descripcion", "estado", "organismo_solicitante"]:
             if datos.get(campo) is not None:
                 update_fields.append(f"{campo} = %s")
                 update_values.append(datos[campo])
 
         if not update_fields:
-            return  # Nada que actualizar
+            return
 
         update_values.append(str(licitacion_id))
         query = f"""

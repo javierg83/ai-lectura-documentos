@@ -100,3 +100,21 @@ def leer_hash(clave):
         import traceback
         traceback.print_exc()
         return {}
+
+
+import redis
+from config import REDIS_HOST, REDIS_PORT, REDIS_DB, REDIS_PASSWORD, REDIS_USERNAME
+
+def get_redis_connection() -> redis.Redis:
+    """
+    Devuelve una conexión directa a Redis para operaciones como scan_iter.
+    """
+    return redis.Redis(
+        host=REDIS_HOST,
+        port=REDIS_PORT,
+        db=REDIS_DB,
+        decode_responses=True,
+        username=REDIS_USERNAME,
+        password=REDIS_PASSWORD,
+        ssl=False  # conexión sin SSL
+    )

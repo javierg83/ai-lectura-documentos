@@ -49,6 +49,8 @@ def guardar_hash(clave, embedding, texto):
 
 def run_embedding_batch(doc_id):
     from services.semantic_extraction.runner import run_semantic_extraction
+    from utils.file_utils import normalizar_nombre
+    doc_id = normalizar_nombre(doc_id)
 
     ruta = os.path.join("archivos_texto", doc_id)
     if not os.path.exists(ruta):
@@ -144,12 +146,36 @@ def run_embedding_batch(doc_id):
         print(f"[❌ ERROR] Fallo embedding documento completo: {e}")
         traceback.print_exc()
 
+    # ===============================
+    # EXTRACCIÓN SEMÁNTICA
+    # ===============================
+
+    # --- DATOS BÁSICOS ---
+    try:
+        print("[SEMANTIC] Iniciando extraccion semantica: DATOS_BASICOS_LICITACION")
+        run_semantic_extraction(
+            licitacion_id=licitacion_uuid,
+            concepto="DATOS_BASICOS_LICITACION",
+            documento_ids=[doc_id],
+            nombre_licitacion=doc_id,
+            top_k=30,
+            min_score=0.15,
+            prompt_version="prompt_datos_basicos_licitacion_v1.txt",
+            extractor_version="semantic_extractor_v1",
+        )
+        print("[SEMANTIC] Extraccion semantica DATOS_BASICOS_LICITACION ejecutada")
+    except Exception:
+        print("[ERROR] Fallo en extraccion semantica DATOS_BASICOS_LICITACION")
+        traceback.print_exc()
+
+
     try:
         print("[SEMANTIC] Iniciando extraccion semantica: ITEMS_LICITACION")
         run_semantic_extraction(
             licitacion_id=licitacion_uuid,
             concepto="ITEMS_LICITACION",
             documento_ids=[doc_id_normalizado],
+            nombre_licitacion=doc_id,  # ✅ Cambio añadido
             top_k=30,
             min_score=0.15,
             prompt_version="prompt_items_licitacion_v1.txt",
@@ -167,6 +193,7 @@ def run_embedding_batch(doc_id):
             licitacion_id=licitacion_uuid,
             concepto="FINANZAS_LICITACION",
             documento_ids=[doc_id_normalizado],
+            nombre_licitacion=doc_id,  # ✅ Cambio añadido
             top_k=30,
             min_score=0.15,
             prompt_version="prompt_finanzas_licitacion_v1.txt",

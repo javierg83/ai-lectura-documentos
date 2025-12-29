@@ -66,7 +66,8 @@ def validate_datos_basicos_licitacion_schema(raw_output: str) -> dict:
         "codigo_licitacion",
         "nombre",
         "descripcion",
-        "estado"
+        "estado",
+        "organismo_solicitante"
     ]
 
     for key in expected_keys:

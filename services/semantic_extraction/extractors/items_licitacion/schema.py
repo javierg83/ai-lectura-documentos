@@ -1,15 +1,28 @@
 # ==============================================
-# Archivo: services/semantic_extraction/extractors/items_licitacion/schema.py (refactor v2)
+# Archivo: services/semantic_extraction/extractors/items_licitacion/schema.py (refactor v3)
 # ==============================================
 
 from typing import Any, Dict, List
+import re
+
 
 class ItemsLicitacionSchemaError(Exception):
     """Error de validación del schema ITEMS_LICITACION"""
     pass
 
+
 def _is_number(value: Any) -> bool:
     return isinstance(value, (int, float))
+
+
+def _detect_embedded_items(texto: str) -> bool:
+    """
+    Detecta numeraciones tipo '1.-', '2.-', etc. dentro de una descripción.
+    """
+    if not texto or not isinstance(texto, str):
+        return False
+    return len(re.findall(r"\b\d{1,2}\.\-?", texto)) >= 2
+
 
 def validate_items_licitacion_schema(data: Dict[str, Any]) -> None:
     """
@@ -37,6 +50,17 @@ def validate_items_licitacion_schema(data: Dict[str, Any]) -> None:
     if "items" not in data or not isinstance(data["items"], list):
         raise ItemsLicitacionSchemaError("Campo 'items' ausente o no es lista")
 
+    # Validación semántica: solo 1 ítem, pero con numeraciones embebidas
+    if len(data["items"]) == 1:
+        desc = data["items"][0].get("descripcion", "")
+        if _detect_embedded_items(desc):
+            raise ItemsLicitacionSchemaError(
+                "Se detectaron numeraciones múltiples (1.-, 2.-) en la descripción, pero solo hay un ítem. Posible error de segmentación."
+            )
+
+    # ----------------------------
+    # Validación por ítem
+    # ----------------------------
     for idx, item in enumerate(data["items"], start=1):
         if not isinstance(item, dict):
             raise ItemsLicitacionSchemaError(f"Item #{idx} no es objeto JSON")

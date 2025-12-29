@@ -24,15 +24,22 @@ class DatosBasicosLicitacionExtractor(BaseSemanticExtractor):
     concepto = "DATOS_BASICOS_LICITACION"
 
     def build_queries(self, licitacion_id: str) -> List[str]:
+        """
+        Queries semánticas para obtener los datos básicos de la licitación.
+        """
         queries = [
             "código de licitación",
+            "número de licitación",
+            "identificación del proceso",
             "nombre de la licitación",
+            "título del proceso",
+            "objeto de la licitación",
             "descripción de la licitación",
             "estado de la licitación",
-            "objeto de la licitación",
-            "identificación del proceso",
-            "número de licitación",
-            "título del proceso"
+            "entidad licitante",
+            "organismo solicitante",
+            "institución que solicita la licitación",
+            "empresa u organismo público que convoca"
         ]
 
         logger.info(
@@ -44,6 +51,9 @@ class DatosBasicosLicitacionExtractor(BaseSemanticExtractor):
         return queries
 
     def build_prompt(self, context: str, licitacion_id: str) -> str:
+        """
+        Construye el prompt para el LLM.
+        """
         logger.info(
             "[DATOS_BASICOS] Construyendo prompt | licitacion_id=%s | context_len=%s",
             licitacion_id,
@@ -61,6 +71,9 @@ class DatosBasicosLicitacionExtractor(BaseSemanticExtractor):
         return prompt
 
     def parse_output(self, raw_output: str) -> Dict[str, Any]:
+        """
+        Valida, normaliza y empaqueta la salida del LLM.
+        """
         logger.info(
             "[DATOS_BASICOS] Parseando salida LLM | raw_len=%s",
             len(raw_output or "")
@@ -68,6 +81,7 @@ class DatosBasicosLicitacionExtractor(BaseSemanticExtractor):
 
         logger.debug("[DATOS_BASICOS] Raw output LLM:\n%s", raw_output)
 
+        # Validar esquema
         data = validate_datos_basicos_licitacion_schema(raw_output)
 
         logger.info(
@@ -75,6 +89,7 @@ class DatosBasicosLicitacionExtractor(BaseSemanticExtractor):
             list(data.keys())
         )
 
+        # Normalizar datos
         normalized = normalize_datos_basicos_licitacion(data)
 
         logger.debug(
@@ -82,4 +97,10 @@ class DatosBasicosLicitacionExtractor(BaseSemanticExtractor):
             normalized
         )
 
-        return normalized
+        # IMPORTANTE:
+        # Se retorna en un wrapper estándar para que el runner
+        # pueda guardar JSON y persistir correctamente
+        return {
+            "concepto": self.concepto,
+            "datos_basicos": normalized
+        }
