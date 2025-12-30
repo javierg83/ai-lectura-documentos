@@ -2,6 +2,7 @@ import psycopg2
 import os
 import uuid
 from datetime import datetime
+import traceback
 
 DATABASE_URL = os.getenv("DATABASE_URL")
 
@@ -118,7 +119,6 @@ def get_or_create_licitacion(nombre_archivo: str) -> str:
         cur.close()
         conn.close()
 
-
 def guardar_items_licitacion(conn, licitacion_id, semantic_run_id, items: list[dict]):
     with conn.cursor() as cur:
         cur.execute("DELETE FROM items_licitacion WHERE semantic_run_id = %s", (semantic_run_id,))
@@ -156,11 +156,9 @@ def guardar_items_licitacion(conn, licitacion_id, semantic_run_id, items: list[d
             ))
         conn.commit()
 
-
 def guardar_especificaciones_tecnicas(conn, semantic_run_id: str, especificaciones: list[dict]):
     with conn.cursor() as cur:
         cur.execute("DELETE FROM item_licitacion_especificaciones WHERE semantic_run_id = %s", (semantic_run_id,))
-
         cur.execute("""
             SELECT item_key, id
             FROM items_licitacion
@@ -198,29 +196,82 @@ def guardar_especificaciones_tecnicas(conn, semantic_run_id: str, especificacion
 
         conn.commit()
 
+# --------------------------------------------------
+# ✅ FINANZAS_LICITACION (CORREGIDO)
+# --------------------------------------------------
 
 def guardar_finanzas_licitacion(conn, licitacion_id, finanzas: dict):
-    with conn.cursor() as cur:
-        cur.execute("DELETE FROM finanzas_licitacion WHERE licitacion_id = %s", (licitacion_id,))
-        cur.execute("""
-            INSERT INTO finanzas_licitacion (
-                licitacion_id,
-                presupuesto_referencial,
-                moneda,
-                forma_pago,
-                plazo_pago,
-                fuente_financiamiento
-            ) VALUES (%s, %s, %s, %s, %s, %s)
-        """, (
-            licitacion_id,
-            finanzas.get("presupuesto_referencial"),
-            finanzas.get("moneda"),
-            finanzas.get("forma_pago"),
-            finanzas.get("plazo_pago"),
-            finanzas.get("fuente_financiamiento")
-        ))
-        conn.commit()
+    now = datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S")
 
+    sql_update = """
+        UPDATE finanzas_licitacion
+        SET
+            presupuesto_referencial = %(presupuesto_referencial)s,
+            moneda = %(moneda)s,
+            forma_pago = %(forma_pago)s,
+            plazo_pago = %(plazo_pago)s,
+            fuente_financiamiento = %(fuente_financiamiento)s,
+            garantias = %(garantias)s,
+            multas = %(multas)s,
+            otros = %(otros)s,
+            resumen = %(resumen)s,
+            updated_at = now()
+        WHERE licitacion_id = %(licitacion_id)s
+    """
+
+    sql_insert = """
+        INSERT INTO finanzas_licitacion (
+            licitacion_id,
+            presupuesto_referencial,
+            moneda,
+            forma_pago,
+            plazo_pago,
+            fuente_financiamiento,
+            garantias,
+            multas,
+            otros,
+            resumen
+        ) VALUES (
+            %(licitacion_id)s,
+            %(presupuesto_referencial)s,
+            %(moneda)s,
+            %(forma_pago)s,
+            %(plazo_pago)s,
+            %(fuente_financiamiento)s,
+            %(garantias)s,
+            %(multas)s,
+            %(otros)s,
+            %(resumen)s
+        )
+    """
+
+    valores = {
+        "licitacion_id": licitacion_id,
+        "presupuesto_referencial": finanzas.get("presupuesto_referencial"),
+        "moneda": finanzas.get("moneda"),
+        "forma_pago": finanzas.get("forma_pago"),
+        "plazo_pago": finanzas.get("plazo_pago"),
+        "fuente_financiamiento": finanzas.get("fuente_financiamiento"),
+        "garantias": finanzas.get("garantias"),
+        "multas": finanzas.get("multas"),
+        "otros": finanzas.get("otros"),
+        "resumen": finanzas.get("resumen"),
+    }
+
+    try:
+        with conn.cursor() as cur:
+            cur.execute(sql_update, valores)
+            if cur.rowcount == 0:
+                cur.execute(sql_insert, valores)
+                if cur.rowcount == 0:
+                    raise RuntimeError("No se pudo insertar finanzas_licitacion")
+        conn.commit()
+        print(f"[{now}] ✅ Finanzas persistidas correctamente | licitacion_id={licitacion_id}")
+    except Exception:
+        print(f"[{now}] ❌ Error persistiendo finanzas | licitacion_id={licitacion_id}")
+        traceback.print_exc()
+        conn.rollback()
+        raise
 
 def obtener_finanzas_por_licitacion(licitacion_id: str) -> dict | None:
     conn = get_pg_conn()
@@ -244,7 +295,6 @@ def obtener_finanzas_por_licitacion(licitacion_id: str) -> dict | None:
     finally:
         cur.close()
         conn.close()
-
 
 def actualizar_datos_basicos_licitacion(licitacion_id: str, datos: dict) -> None:
     conn = get_pg_conn()

@@ -1,25 +1,65 @@
+import logging
 import json
+import re
 from typing import Any, Dict, List
 
 from services.semantic_extraction.extractors.base_extractor import BaseSemanticExtractor
-from services.semantic_extraction.registry import register_extractor
+from services.licitacion_service import (
+    guardar_items_licitacion,
+    guardar_especificaciones_tecnicas
+)
 from services.semantic_extraction.extractors.items_licitacion.schema import (
     validate_items_licitacion_schema,
-    ItemsLicitacionSchemaError
+    ItemsLicitacionSchemaError,
 )
-from services.semantic_extraction.extractors.items_licitacion.normalizer import (
-    normalize_items_licitacion,
-)
+
+logger = logging.getLogger(__name__)
+
+# ==========================================================
+# CONFIGURACIÓN DE PROMPT
+# ==========================================================
+
+PROMPT_VERSION = "v3"
+
+
+def clean_json_output(text: str) -> str:
+    """
+    Limpia un bloque de texto que puede estar envuelto en ```json ... ```
+    y normaliza comillas raras.
+    """
+    if not text or not isinstance(text, str):
+        return ""
+
+    text = text.strip()
+
+    # Eliminar fences tipo ```json ... ```
+    text = re.sub(r"^```(?:json)?\s*", "", text)
+    text = re.sub(r"\s*```$", "", text)
+
+    # Normalizar comillas “raras”
+    text = (
+        text.replace("“", "\"")
+            .replace("”", "\"")
+            .replace("‘", "'")
+            .replace("’", "'")
+    )
+
+    return text.strip()
+
 
 class ItemsLicitacionExtractor(BaseSemanticExtractor):
-    CONCEPTO = "ITEMS_LICITACION"
+    """
+    Extractor semántico del concepto ITEMS_LICITACION
+    """
 
-    @property
-    def concepto(self) -> str:
-        return self.CONCEPTO
+    concepto = "ITEMS_LICITACION"
 
-    def build_queries(self) -> List[str]:
-        return [
+    # ======================================================
+    # Queries semánticas (NO MODIFICADAS)
+    # ======================================================
+
+    def build_queries(self, licitacion_id: str) -> List[str]:
+        queries = [
             "ítems solicitados",
             "detalle de los ítems",
             "productos requeridos",
@@ -29,68 +69,159 @@ class ItemsLicitacionExtractor(BaseSemanticExtractor):
             "oferta técnica",
             "anexo oferta",
             "lista de ítems",
-            "descripción de los ítems"
+            "descripción de los ítems",
         ]
 
-    def build_prompt(self, context: str) -> str:
-        template = self._load_prompt_template()
-        return template.replace("{LICITACION_ID}", str(self.licitacion_id)).replace("{CONTEXT}", context)
+        logger.info(
+            "[ITEMS] Queries generadas | licitacion_id=%s | total=%s",
+            licitacion_id,
+            len(queries),
+        )
+        logger.debug("[ITEMS] Queries: %s", queries)
 
-    def parse_output(self, raw_output: str) -> Dict[str, Any]:
-        try:
-            parsed = json.loads(raw_output)
-        except json.JSONDecodeError as e:
-            raise ValueError(f"Salida IA no es JSON válido: {e}")
+        return queries
 
-        if not isinstance(parsed, dict):
-            raise ValueError("Salida IA no es un objeto JSON")
+    # ======================================================
+    # Prompt
+    # ======================================================
 
-        concepto = parsed.get("concepto")
-        if concepto != self.CONCEPTO:
-            raise ValueError(f"Concepto incorrecto. Esperado={self.CONCEPTO}, recibido={concepto}")
-
-        if "items" not in parsed or not isinstance(parsed["items"], list):
-            raise ValueError("JSON no contiene lista 'items' válida")
-
-        # ✅ Reparar estructuras mal generadas por el modelo (fallback)
-        licitacion_data = parsed.get("licitacion")
-        if isinstance(licitacion_data, dict):
-            parsed["licitacion_id"] = licitacion_data.get("id") or licitacion_data.get("licitacion_id")
-            parsed["codigo_licitacion"] = licitacion_data.get("codigo_licitacion")
-        elif isinstance(licitacion_data, str):
-            try:
-                temp = json.loads(licitacion_data.replace("'", '"'))
-                parsed["licitacion_id"] = temp.get("id")
-                parsed["codigo_licitacion"] = temp.get("codigo_licitacion")
-            except Exception:
-                parsed["licitacion_id"] = licitacion_data
-
-        parsed.setdefault("licitacion_id", self.licitacion_id)
-
-        # ✅ Forzar 'pagina' a int o None si viene como string
-        for item in parsed.get("items", []):
-            for fuente in item.get("fuentes", []):
-                pagina = fuente.get("pagina")
-                if isinstance(pagina, str) and pagina.isdigit():
-                    fuente["pagina"] = int(pagina)
-                elif pagina in ("", None):
-                    fuente["pagina"] = None
-
-        try:
-            validate_items_licitacion_schema(parsed)
-        except ItemsLicitacionSchemaError as e:
-            raise ValueError(f"Schema inválido: {e}")
-
-        return parsed
-
-    def normalize(self, parsed_output: Dict[str, Any]) -> Dict[str, Any]:
-        return normalize_items_licitacion(
-            parsed_output,
-            licitacion_id=self.licitacion_id,
-            semantic_run_id=self.extractor_version or "default",
+    def build_prompt(self, context: str, licitacion_id: str) -> str:
+        logger.info(
+            "[ITEMS] Construyendo prompt | licitacion_id=%s | context_len=%s",
+            licitacion_id,
+            len(context or ""),
         )
 
-register_extractor(
-    ItemsLicitacionExtractor.CONCEPTO,
-    ItemsLicitacionExtractor
-)
+        prompt_path = (
+            f"{self.concepto.lower()}/"
+            f"prompt_{self.concepto.lower()}_{PROMPT_VERSION}.txt"
+        )
+
+        prompt_template = self.load_prompt(prompt_path)
+
+        prompt = prompt_template.replace("{contexto}", context)
+
+        logger.debug("[ITEMS] Prompt final (primeros 2000 chars):\n%s", prompt[:2000])
+
+        return prompt
+
+    # ======================================================
+    # Parseo de salida LLM
+    # ======================================================
+
+    def parse_output(self, raw_output: str) -> Dict[str, Any]:
+        logger.info(
+            "[ITEMS] Parseando salida LLM | raw_len=%s",
+            len(raw_output or ""),
+        )
+
+        logger.debug("[ITEMS] Raw output LLM completo:\n%s", raw_output)
+
+        cleaned_output = clean_json_output(raw_output)
+
+        if not cleaned_output:
+            logger.error("[ITEMS] Salida LLM vacía tras limpieza")
+            raise ItemsLicitacionSchemaError(
+                "Salida del LLM vacía tras limpieza"
+            )
+
+        # -----------------------------
+        # JSON → dict
+        # -----------------------------
+        try:
+            data = json.loads(cleaned_output)
+        except json.JSONDecodeError as e:
+            logger.error(
+                "[ITEMS] JSON inválido tras limpieza | error=%s\nContenido:\n%s",
+                e,
+                cleaned_output,
+            )
+            raise ItemsLicitacionSchemaError(
+                f"JSON inválido devuelto por el LLM: {e}"
+            )
+
+        # -----------------------------
+        # Logging estructural del JSON
+        # -----------------------------
+        logger.info(
+            "[ITEMS] Claves principales del JSON parseado: %s",
+            list(data.keys()),
+        )
+
+        if "resumen" in data:
+            logger.info(
+                "[ITEMS] Resumen devuelto por el modelo: %s",
+                data.get("resumen"),
+            )
+
+        # -----------------------------
+        # Validación de schema
+        # -----------------------------
+        validate_items_licitacion_schema(data)
+        logger.info("[ITEMS] Resultado validado correctamente por schema")
+
+        items = data.get("items", [])
+
+        # -----------------------------
+        # LOG CRÍTICO: items vacíos
+        # -----------------------------
+        if not items:
+            logger.warning(
+                "[ITEMS] ⚠️ items == [] | licitacion_id=%s",
+                data.get("licitacion_id"),
+            )
+            logger.warning(
+                "[ITEMS] Observaciones del resumen: %s",
+                data.get("resumen", {}).get("observaciones"),
+            )
+            logger.debug(
+                "[ITEMS] JSON completo cuando items == []:\n%s",
+                json.dumps(data, indent=2, ensure_ascii=False),
+            )
+
+        return {
+            "concepto": self.concepto,
+            "resumen": data.get("resumen"),
+            "items": items,
+            "especificaciones": data.get("especificaciones", []),
+            "warnings": data.get("warnings", []),
+        }
+
+    # ======================================================
+    # Persistencia (NO MODIFICADA)
+    # ======================================================
+
+    def persist_resultado(
+        self,
+        licitacion_id: str,
+        json_data: Dict[str, Any],
+        semantic_run_id: str,
+    ) -> None:
+        logger.info(
+            "[ITEMS] Persistiendo resultado | licitacion_id=%s | total_items=%s",
+            licitacion_id,
+            len(json_data.get("items", [])),
+        )
+
+        conn = self.get_pg_conn()
+
+        try:
+            guardar_items_licitacion(
+                conn=conn,
+                licitacion_id=licitacion_id,
+                semantic_run_id=semantic_run_id,
+                items=json_data["items"],
+            )
+
+            if json_data.get("especificaciones"):
+                guardar_especificaciones_tecnicas(
+                    conn=conn,
+                    semantic_run_id=semantic_run_id,
+                    especificaciones=json_data["especificaciones"],
+                )
+
+            conn.commit()
+            logger.info("[ITEMS] Persistencia completada correctamente")
+
+        finally:
+            conn.close()

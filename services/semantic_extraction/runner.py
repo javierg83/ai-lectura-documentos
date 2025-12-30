@@ -1,7 +1,3 @@
-# ==========================================================
-# Archivo: services/semantic_extraction/runner.py (ACTUALIZADO Y COMPLETO)
-# ==========================================================
-
 import json
 import os
 import traceback
@@ -69,11 +65,17 @@ def _semantic_search(query: str, documento_ids: List[str], top_k: int, min_score
                     "texto": texto,
                     "distancia": dist,
                 })
-            except Exception:
+            except Exception as e:
+                print(f"[⚠️] Error procesando clave Redis {key}: {e}")
                 continue
 
     resultados.sort(key=lambda x: x["distancia"])
     print(f"[🔍] Resultados encontrados para query '{query}': {len(resultados)}")
+
+    for i, r in enumerate(resultados[:top_k]):
+        print(f"\n[🧩 Chunk #{i+1}] redis_key={r['redis_key']} | distancia={r['distancia']:.4f}")
+        print(f"[📝 Texto (primeros 500 chars)]:\n{r['texto'][:500]}")
+
     return resultados[:top_k]
 
 def _build_context(chunks: List[Dict[str, Any]]) -> str:
@@ -130,6 +132,10 @@ def run_semantic_extraction(
     print(f"[SEMANTIC] Contexto final tiene {len(context)} caracteres")
 
     print(f"[SEMANTIC] Ejecutando extractor.run()...")
+    print("\n[DEBUG CONTEXT PREVIEW]\n")
+    print(context[:4000])
+    print("\n[END CONTEXT PREVIEW]\n")
+
     result = extractor.run(context)
 
     try:
@@ -205,13 +211,21 @@ def run_semantic_extraction(
 
         elif concepto == "FINANZAS_LICITACION":
             from services.licitacion_service import guardar_finanzas_licitacion
-            guardar_finanzas_licitacion(pg_conn, licitacion_id, result)
+            import datetime
+            now = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            print(f"[{now}] 🏦 Procesando resultado de FINANZAS_LICITACION para licitacion_id={licitacion_id}")
+            try:
+                guardar_finanzas_licitacion(pg_conn, licitacion_id, result["finanzas"])
+                print(f"[{now}] ✅ Datos financieros guardados correctamente en BD")
+            except Exception as e:
+                print(f"[{now}] ❌ Error al guardar datos financieros: {str(e)}")
+                raise
 
         elif concepto == "DATOS_BASICOS_LICITACION":
             from services.licitacion_service import actualizar_datos_basicos_licitacion
             actualizar_datos_basicos_licitacion(
                 licitacion_id,
-                result.get("datos_basicos", {})  # <<< CAMBIO ÚNICO >>>
+                result.get("datos_basicos", {})
             )
     finally:
         pg_conn.close()

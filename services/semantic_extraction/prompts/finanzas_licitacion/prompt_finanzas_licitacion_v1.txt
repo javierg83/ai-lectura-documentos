@@ -23,5 +23,6 @@ CAMPOS A EXTRAER (si existen):
 - garantias
 - multas
 
-CONTEXTO:
-{CONTEXT}
+<CONTEXT>
+{contexto}
+</CONTEXT>

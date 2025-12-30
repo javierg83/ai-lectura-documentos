@@ -15,6 +15,11 @@ from services.semantic_extraction.extractors.datos_basicos_licitacion.normalizer
 
 logger = logging.getLogger(__name__)
 
+# ==========================================================
+# CONFIGURACIÓN DE PROMPT
+# ==========================================================
+PROMPT_VERSION = "v1"
+
 
 class DatosBasicosLicitacionExtractor(BaseSemanticExtractor):
     """
@@ -60,9 +65,12 @@ class DatosBasicosLicitacionExtractor(BaseSemanticExtractor):
             len(context or "")
         )
 
-        prompt_template = self.load_prompt(
-            "datos_basicos_licitacion/prompt_datos_basicos_licitacion_v1.txt"
+        prompt_path = (
+            f"datos_basicos_licitacion/"
+            f"prompt_datos_basicos_licitacion_{PROMPT_VERSION}.txt"
         )
+
+        prompt_template = self.load_prompt(prompt_path)
 
         prompt = prompt_template.replace("{contexto}", context)
 
@@ -97,9 +105,7 @@ class DatosBasicosLicitacionExtractor(BaseSemanticExtractor):
             normalized
         )
 
-        # IMPORTANTE:
-        # Se retorna en un wrapper estándar para que el runner
-        # pueda guardar JSON y persistir correctamente
+        # Wrapper estándar esperado por el runner
         return {
             "concepto": self.concepto,
             "datos_basicos": normalized

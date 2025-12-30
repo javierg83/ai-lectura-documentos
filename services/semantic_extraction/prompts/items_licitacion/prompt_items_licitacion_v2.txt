@@ -162,5 +162,5 @@ CONTEXTO DOCUMENTAL
 ==============================
 
 <CONTEXT>
-{CONTEXT}
+{contexto}
 </CONTEXT>

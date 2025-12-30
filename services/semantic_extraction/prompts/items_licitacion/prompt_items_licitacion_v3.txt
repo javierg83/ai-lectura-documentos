@@ -40,6 +40,29 @@ REGLAS CRÍTICAS (OBLIGATORIAS)
    - No agregues texto explicativo fuera del JSON.
    - No uses Markdown.
 
+7. Si no logras detectar ítems, debes explicar por qué en el campo `resumen.observaciones`.
+
+8. Debes incluir un campo adicional `"explicacion_proceso"` (string) donde expliques brevemente cómo abordaste la tarea,
+   qué estrategias seguiste para detectar los ítems, y si hubo dudas o ambigüedades en el proceso.
+
+==============================
+EJEMPLOS ESPECIALES
+==============================
+
+EJEMPLO — ÍTEM COMPUESTO QUE DEBE DIVIDIRSE
+
+Si el contexto contiene una frase como:
+
+"Adquisición de estanque vertical, bomba centrífuga y kit de instalación"
+
+Debes separarlo en 3 ítems diferentes:
+
+1. Ítem 1: nombre_item = "Estanque vertical"
+2. Ítem 2: nombre_item = "Bomba centrífuga"
+3. Ítem 3: nombre_item = "Kit de instalación"
+
+No los agrupes en un solo ítem, incluso si están descritos en una sola línea o frase.
+
 ==============================
 DEFINICIONES
 ==============================
@@ -110,6 +133,7 @@ FORMATO DE SALIDA (JSON ESTRICTO)
       "notas": null
     }
   ],
+  "explicacion_proceso": "Texto explicativo generado por el modelo.",
   "warnings": []
 }
 
