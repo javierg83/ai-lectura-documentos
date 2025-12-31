@@ -1,20 +1,20 @@
 # Project Plan — Resumen de Componentes
 
-_Generado automáticamente el 2025-12-30 17:33 UTC_
+_Generado automáticamente el 2025-12-31 22:14 UTC_
 
 - **Raíz analizada:** `C:\Desarrollo\IA\Proyectos\ai-lectura-documentos`
-- **Archivos (texto y binarios):** 159
-- **LOC (estimado):** 12342
+- **Archivos (texto y binarios):** 173
+- **LOC (estimado):** 16310
 
 ## Lenguajes / Tipos (conteo)
-- Python: 65
-- JSON: 60
+- Python: 72
+- JSON: 59
+- Text: 13
 - Other: 11
 - HTML: 7
-- Text: 7
-- SQL: 5
+- SQL: 6
+- CSS: 2
 - Markdown: 2
-- CSS: 1
 - Config: 1
 
 ## Árbol del proyecto (resumido)
@@ -33,18 +33,8 @@ _Generado automáticamente el 2025-12-30 17:33 UTC_
   └─ 📄 CI-Javier_resultado_paginas.json
   └─ 📄 config.py
   └─ 📄 create_index.py
-  └─ 📄 debug_llm_raw_items_licitacion_20251230_030605.json
-  └─ 📄 debug_llm_raw_items_licitacion_20251230_031430.json
-  └─ 📄 debug_llm_raw_items_licitacion_20251230_032222.json
-  └─ 📄 debug_llm_raw_items_licitacion_20251230_125736.json
-  └─ 📄 debug_llm_raw_items_licitacion_20251230_130516.json
-  └─ 📄 debug_llm_raw_items_licitacion_20251230_131201.json
-  └─ 📄 debug_llm_raw_items_licitacion_20251230_143646.json
-  └─ 📄 debug_llm_raw_items_licitacion_20251230_144450.json
-  └─ 📄 debug_llm_raw_items_licitacion_20251230_145154.json
-  └─ 📄 debug_llm_raw_items_licitacion_20251230_165036.json
-  └─ 📄 debug_llm_raw_items_licitacion_20251230_165843.json
-  └─ 📄 debug_llm_raw_items_licitacion_20251230_170557.json
+  └─ 📄 debug_llm_raw_items_licitacion_20251231_214746.json
+  └─ 📄 debug_llm_raw_items_licitacion_20251231_215056.json
   └─ 📄 documento_reconstruido copy.pdf
   └─ 📄 documento_reconstruido.docx
   └─ 📄 documento_reconstruido.pdf
@@ -83,6 +73,8 @@ _Generado automáticamente el 2025-12-30 17:33 UTC_
     └─ 📄 salida_gris.png
 📁 Include/
 📁 db/
+📁 debug_homologacion/
+    └─ 📄 resp_homologacion_6e5a09ad-0b71-4cc0-adb7-a8494a267523.json
 📁 manual/
 📁 productos/
     └─ 📄 productos.xlsx
@@ -149,15 +141,40 @@ _Generado automáticamente el 2025-12-30 17:33 UTC_
   📁 1_bases_5300_44_l125__8/
       └─ 📄 finanzas_licitacion_20251229_021500.json
       └─ 📄 items_licitacion_20251229_021009.json
+  📁 6e5a09ad-0b71-4cc0-adb7-a8494a267523-old/
+      └─ 📄 homologacion_productos-4o-mini.json
+      └─ 📄 homologacion_productos.json
+      └─ 📄 prompt_generado-4o-mini.txt
+      └─ 📄 prompt_generado.txt
+      └─ 📄 resp_llm_homologacion.json
+  📁 6e5a09ad-0b71-4cc0-adb7-a8494a267523-old2/
+      └─ 📄 homologacion_productos.json
+      └─ 📄 prompt_generado.txt
+      └─ 📄 resp_llm_homologacion.json
+  📁 6e5a09ad-0b71-4cc0-adb7-a8494a267523/
+      └─ 📄 homologacion_productos.json
+      └─ 📄 prompt_generado.txt
+      └─ 📄 resp_llm_homologacion.json
   📁 bases_administrativas_especiales__26/
       └─ 📄 finanzas_licitacion_20251228_213756.json
       └─ 📄 items_licitacion_20251228_213418.json
+  📁 bases_administrativas_especiales__27/
+      └─ 📄 datos_basicos_licitacion_20251230_182258.json
 📁 services/
   📁 homologacion/
+    📁 models/
+        └─ 📄 __init__.py
+        └─ 📄 schema.py
     📁 prompts/
         └─ 📄 prompt_homologacion_v1.txt
+        └─ 📄 prompt_homologacion_v2.txt
+        └─ 📄 prompt_homologacion_v3.txt
       └─ 📄 __init__.py
+      └─ 📄 homologacion_db.py
+      └─ 📄 homologacion_model.py
       └─ 📄 homologador.py
+      └─ 📄 models.py
+      └─ 📄 product_loader.py
   📁 semantic_extraction/
     📁 extractors/
       📁 datos_basicos_licitacion/
@@ -205,10 +222,12 @@ _Generado automáticamente el 2025-12-30 17:33 UTC_
     └─ 📄 2-item_licitacion_especificaciones.sql
     └─ 📄 3-licitacion_add_campos.sql
     └─ 📄 4-finanzas_licitacion_add_campos.sql
+    └─ 📄 5-homologacion_productos.sql
     └─ 📄 create-inicial.sql
 📁 static/
   📁 css/
       └─ 📄 style.css
+      └─ 📄 theme-glass.css
 📁 templates/
     └─ 📄 chat.html
     └─ 📄 chat_embedding.html
@@ -221,6 +240,7 @@ _Generado automáticamente el 2025-12-30 17:33 UTC_
   📁 manual/
       └─ 📄 base_extractor_simplificado.py
       └─ 📄 items_extractor_manual.py
+      └─ 📄 runner_homologacion_manual.py
       └─ 📄 test_extract_items_manual.py
       └─ 📄 test_runner_semantic_only.py
 📁 utils/
@@ -312,85 +332,15 @@ a n n o t a t e d - t y p e s = = 0 . 7 . 0 
 ### `create_index.py`
 - Python — Tech: Redis (cache/colas) | tamaño: 963 bytes | LOC aprox: 31
 
-### `debug_llm_raw_items_licitacion_20251230_030605.json`
-- JSON | tamaño: 414 bytes | LOC aprox: 3
+### `debug_llm_raw_items_licitacion_20251231_214746.json`
+- JSON | tamaño: 2375 bytes | LOC aprox: 3
 **Encabezado/comentario (snippet):**
 ```
 {
 ```
 
-### `debug_llm_raw_items_licitacion_20251230_031430.json`
-- JSON — Tech: Redis (cache/colas) | tamaño: 3137 bytes | LOC aprox: 85
-**Encabezado/comentario (snippet):**
-```
-{
-```
-
-### `debug_llm_raw_items_licitacion_20251230_032222.json`
-- JSON | tamaño: 700 bytes | LOC aprox: 3
-**Encabezado/comentario (snippet):**
-```
-{
-```
-
-### `debug_llm_raw_items_licitacion_20251230_125736.json`
-- JSON | tamaño: 414 bytes | LOC aprox: 3
-**Encabezado/comentario (snippet):**
-```
-{
-```
-
-### `debug_llm_raw_items_licitacion_20251230_130516.json`
-- JSON — Tech: Redis (cache/colas) | tamaño: 2791 bytes | LOC aprox: 73
-**Encabezado/comentario (snippet):**
-```
-{
-```
-
-### `debug_llm_raw_items_licitacion_20251230_131201.json`
-- JSON | tamaño: 893 bytes | LOC aprox: 3
-**Encabezado/comentario (snippet):**
-```
-{
-```
-
-### `debug_llm_raw_items_licitacion_20251230_143646.json`
-- JSON | tamaño: 414 bytes | LOC aprox: 3
-**Encabezado/comentario (snippet):**
-```
-{
-```
-
-### `debug_llm_raw_items_licitacion_20251230_144450.json`
-- JSON — Tech: Redis (cache/colas) | tamaño: 2745 bytes | LOC aprox: 73
-**Encabezado/comentario (snippet):**
-```
-{
-```
-
-### `debug_llm_raw_items_licitacion_20251230_145154.json`
-- JSON | tamaño: 893 bytes | LOC aprox: 3
-**Encabezado/comentario (snippet):**
-```
-{
-```
-
-### `debug_llm_raw_items_licitacion_20251230_165036.json`
-- JSON | tamaño: 414 bytes | LOC aprox: 3
-**Encabezado/comentario (snippet):**
-```
-{
-```
-
-### `debug_llm_raw_items_licitacion_20251230_165843.json`
-- JSON — Tech: Redis (cache/colas) | tamaño: 2795 bytes | LOC aprox: 73
-**Encabezado/comentario (snippet):**
-```
-{
-```
-
-### `debug_llm_raw_items_licitacion_20251230_170557.json`
-- JSON | tamaño: 893 bytes | LOC aprox: 3
+### `debug_llm_raw_items_licitacion_20251231_215056.json`
+- JSON | tamaño: 2375 bytes | LOC aprox: 3
 **Encabezado/comentario (snippet):**
 ```
 {
@@ -476,14 +426,14 @@ a n n o t a t e d - t y p e s = = 0 . 7 . 0 
 - Funciones: convertir_pagina_a_base64, process_pages, guardar_resultados
 
 ### `project_plan.json`
-- JSON | tamaño: 60511 bytes | LOC aprox: 1941
+- JSON | tamaño: 106208 bytes | LOC aprox: 3388
 **Encabezado/comentario (snippet):**
 ```
 {
 ```
 
 ### `PROJECT_PLAN.md`
-- Markdown — Tech: Flask (API web), Redis (cache/colas) | tamaño: 18904 bytes | LOC aprox: 570
+- Markdown — Tech: Redis (cache/colas) | tamaño: 38287 bytes | LOC aprox: 1182
 **Encabezado/comentario (snippet):**
 ```
 # Project Plan — Resumen de Componentes
@@ -544,6 +494,13 @@ a n n o t a t e d - t y p e s = = 0 . 7 . 0 
 - Python — Tech: Redis (cache/colas) | tamaño: 2577 bytes | LOC aprox: 79
 - Funciones: validar_claves
 
+### `debug_homologacion/resp_homologacion_6e5a09ad-0b71-4cc0-adb7-a8494a267523.json`
+- JSON | tamaño: 1491 bytes | LOC aprox: 41
+**Encabezado/comentario (snippet):**
+```
+[
+```
+
 ### `Imagenes Ejemplo Convolucion/pag2.jpg`
 - Archivo | tamaño: 246409 bytes
 
@@ -554,7 +511,7 @@ a n n o t a t e d - t y p e s = = 0 . 7 . 0 
 - Archivo | tamaño: 381364 bytes
 
 ### `productos/productos.xlsx`
-- Archivo | tamaño: 10335 bytes
+- Archivo | tamaño: 10391 bytes
 
 ### `routes/chat.py`
 - Python — Tech: Flask (API web), Redis (cache/colas) | tamaño: 3669 bytes | LOC aprox: 102
@@ -851,6 +808,83 @@ a n n o t a t e d - t y p e s = = 0 . 7 . 0 
 {
 ```
 
+### `salida_json/6e5a09ad-0b71-4cc0-adb7-a8494a267523/homologacion_productos.json`
+- JSON | tamaño: 2655 bytes | LOC aprox: 57
+**Encabezado/comentario (snippet):**
+```
+{
+```
+
+### `salida_json/6e5a09ad-0b71-4cc0-adb7-a8494a267523/prompt_generado.txt`
+- Text — Tech: Redis (cache/colas) | tamaño: 8417 bytes | LOC aprox: 222
+**Encabezado/comentario (snippet):**
+```
+Eres un asistente experto en homologación de productos para licitaciones públicas.
+```
+
+### `salida_json/6e5a09ad-0b71-4cc0-adb7-a8494a267523/resp_llm_homologacion.json`
+- JSON | tamaño: 2237 bytes | LOC aprox: 45
+**Encabezado/comentario (snippet):**
+```
+[
+```
+
+### `salida_json/6e5a09ad-0b71-4cc0-adb7-a8494a267523-old/homologacion_productos-4o-mini.json`
+- JSON | tamaño: 4467 bytes | LOC aprox: 106
+**Encabezado/comentario (snippet):**
+```
+{
+```
+
+### `salida_json/6e5a09ad-0b71-4cc0-adb7-a8494a267523-old/homologacion_productos.json`
+- JSON | tamaño: 4390 bytes | LOC aprox: 82
+**Encabezado/comentario (snippet):**
+```
+{
+```
+
+### `salida_json/6e5a09ad-0b71-4cc0-adb7-a8494a267523-old/prompt_generado-4o-mini.txt`
+- Text — Tech: Redis (cache/colas) | tamaño: 8138 bytes | LOC aprox: 171
+**Encabezado/comentario (snippet):**
+```
+Eres un asistente experto en homologación de productos en el contexto de licitaciones públicas. Se te entregará un listado de ítems detectados en una licitación y un catálogo de productos disponibles. Tu tarea es comparar semánticamente cada ítem contra los productos y devolver los 3 productos más similares por cada ítem, ordenados por un score de similitud (entre 0 y 1).
+```
+
+### `salida_json/6e5a09ad-0b71-4cc0-adb7-a8494a267523-old/prompt_generado.txt`
+- Text — Tech: Redis (cache/colas) | tamaño: 8138 bytes | LOC aprox: 171
+**Encabezado/comentario (snippet):**
+```
+Eres un asistente experto en homologación de productos en el contexto de licitaciones públicas. Se te entregará un listado de ítems detectados en una licitación y un catálogo de productos disponibles. Tu tarea es comparar semánticamente cada ítem contra los productos y devolver los 3 productos más similares por cada ítem, ordenados por un score de similitud (entre 0 y 1).
+```
+
+### `salida_json/6e5a09ad-0b71-4cc0-adb7-a8494a267523-old/resp_llm_homologacion.json`
+- JSON | tamaño: 3926 bytes | LOC aprox: 70
+**Encabezado/comentario (snippet):**
+```
+[
+```
+
+### `salida_json/6e5a09ad-0b71-4cc0-adb7-a8494a267523-old2/homologacion_productos.json`
+- JSON | tamaño: 3469 bytes | LOC aprox: 82
+**Encabezado/comentario (snippet):**
+```
+{
+```
+
+### `salida_json/6e5a09ad-0b71-4cc0-adb7-a8494a267523-old2/prompt_generado.txt`
+- Text — Tech: Redis (cache/colas) | tamaño: 8138 bytes | LOC aprox: 171
+**Encabezado/comentario (snippet):**
+```
+Eres un asistente experto en homologación de productos en el contexto de licitaciones públicas. Se te entregará un listado de ítems detectados en una licitación y un catálogo de productos disponibles. Tu tarea es comparar semánticamente cada ítem contra los productos y devolver los 3 productos más similares por cada ítem, ordenados por un score de similitud (entre 0 y 1).
+```
+
+### `salida_json/6e5a09ad-0b71-4cc0-adb7-a8494a267523-old2/resp_llm_homologacion.json`
+- JSON | tamaño: 3000 bytes | LOC aprox: 70
+**Encabezado/comentario (snippet):**
+```
+[
+```
+
 ### `salida_json/bases_administrativas_especiales__26/finanzas_licitacion_20251228_213756.json`
 - JSON | tamaño: 184 bytes | LOC aprox: 9
 **Encabezado/comentario (snippet):**
@@ -860,6 +894,13 @@ a n n o t a t e d - t y p e s = = 0 . 7 . 0 
 
 ### `salida_json/bases_administrativas_especiales__26/items_licitacion_20251228_213418.json`
 - JSON | tamaño: 13581 bytes | LOC aprox: 295
+**Encabezado/comentario (snippet):**
+```
+{
+```
+
+### `salida_json/bases_administrativas_especiales__27/datos_basicos_licitacion_20251230_182258.json`
+- JSON | tamaño: 534 bytes | LOC aprox: 10
 **Encabezado/comentario (snippet):**
 ```
 {
@@ -875,11 +916,8 @@ a n n o t a t e d - t y p e s = = 0 . 7 . 0 
 - Python — Servicios/Lógica de negocio | tamaño: 10809 bytes | LOC aprox: 324
 
 ### `services/llm_service.py`
-- Python — Servicios/Lógica de negocio | tamaño: 2793 bytes | LOC aprox: 84
-**Docstring módulo (resumen):**
-> Servicio LLM directo (sin chat, sin usuario, sin embeddings).
-> Usado por extractores semánticos y procesos batch.
-- Funciones: _guardar_llm_raw_json, run_llm_raw
+- Python — Servicios/Lógica de negocio | tamaño: 3787 bytes | LOC aprox: 116
+- Funciones: _guardar_llm_raw_json, run_llm_raw, run_llm_raw_with_tokens
 
 ### `services/pdf_service.py`
 - Python — Servicios/Lógica de negocio — Tech: Redis (cache/colas) | tamaño: 5782 bytes | LOC aprox: 132
@@ -888,14 +926,57 @@ a n n o t a t e d - t y p e s = = 0 . 7 . 0 
 ### `services/__init__.py`
 - Python | tamaño: 0 bytes
 
+### `services/homologacion/homologacion_db.py`
+- Python | tamaño: 5952 bytes | LOC aprox: 132
+- Funciones: save_homologacion_result
+
+### `services/homologacion/homologacion_model.py`
+- Python — Modelo/Validación Pydantic; Modelos/Esquemas — Tech: Pydantic (modelos/validación) | tamaño: 1087 bytes | LOC aprox: 42
+- Clases: ProductoHomologado, CandidatoHomologacion, ResultadoHomologacion, ResumenHomologacionProductos, RespuestaHomologacionProductos
+
 ### `services/homologacion/homologador.py`
-- Python | tamaño: 0 bytes
+- Python | tamaño: 4467 bytes | LOC aprox: 98
+- Funciones: homologar_productos_para_licitacion
+
+### `services/homologacion/models.py`
+- Python — Modelos/Esquemas | tamaño: 1199 bytes | LOC aprox: 40
+- Clases: ProductoBase, ItemDetectado, ProductoHomologado, ResultadoHomologacion, ResultadoHomologacionLicitacion
+
+### `services/homologacion/product_loader.py`
+- Python | tamaño: 1586 bytes | LOC aprox: 40
+- Funciones: cargar_productos_catalogo
 
 ### `services/homologacion/__init__.py`
 - Python | tamaño: 2 bytes | LOC aprox: 1
 
+### `services/homologacion/models/schema.py`
+- Python | tamaño: 1046 bytes | LOC aprox: 45
+- Clases: ProductoCatalogo, ItemLicitacion, ProductoHomologado, CandidatoHomologacion, ResultadoHomologacion, ResultadoHomologacionLicitacion
+
+### `services/homologacion/models/__init__.py`
+- Python | tamaño: 2 bytes | LOC aprox: 1
+
 ### `services/homologacion/prompts/prompt_homologacion_v1.txt`
-- Text | tamaño: 0 bytes
+- Text | tamaño: 3743 bytes | LOC aprox: 122
+**Encabezado/comentario (snippet):**
+```
+Eres un asistente experto en homologación de productos para procesos de compra pública.
+### FORMATO DE SALIDA (OBLIGATORIO)
+```
+
+### `services/homologacion/prompts/prompt_homologacion_v2.txt`
+- Text | tamaño: 2862 bytes | LOC aprox: 69
+**Encabezado/comentario (snippet):**
+```
+Eres un asistente experto en homologación de productos en el contexto de licitaciones públicas. Se te entregará un listado de ítems detectados en una licitación y un catálogo de productos disponibles. Tu tarea es comparar semánticamente cada ítem contra los productos y devolver los 3 productos más similares por cada ítem, ordenados por un score de similitud (entre 0 y 1).
+```
+
+### `services/homologacion/prompts/prompt_homologacion_v3.txt`
+- Text | tamaño: 3141 bytes | LOC aprox: 120
+**Encabezado/comentario (snippet):**
+```
+Eres un asistente experto en homologación de productos para licitaciones públicas.
+```
 
 ### `services/semantic_extraction/debug_llm_raw_items_licitacion_20251226_234850.json`
 - JSON — Tech: Redis (cache/colas) | tamaño: 6812 bytes | LOC aprox: 130
@@ -1029,6 +1110,13 @@ ALTER TABLE licitaciones
 ALTER TABLE finanzas_licitacion
 ```
 
+### `sql/5-homologacion_productos.sql`
+- SQL | tamaño: 1386 bytes | LOC aprox: 36
+**Encabezado/comentario (snippet):**
+```
+-- ==============================================
+```
+
 ### `sql/create-inicial.sql`
 - SQL — Tech: Redis (cache/colas) | tamaño: 6629 bytes | LOC aprox: 161
 **Encabezado/comentario (snippet):**
@@ -1042,6 +1130,16 @@ ALTER TABLE finanzas_licitacion
 ```
 :root {
 /* Navegación principal y secundaria */
+```
+
+### `static/css/theme-glass.css`
+- CSS — Archivos estáticos (CSS/JS/Imágenes) | tamaño: 2612 bytes | LOC aprox: 113
+**Encabezado/comentario (snippet):**
+```
+/* ======== Variables de color y fondo ======== */
+/* ======== Reset básico ======== */
+/* ======== Contenedores ======== */
+/* ======== Input ======== */
 ```
 
 ### `templates/chat.html`
@@ -1106,6 +1204,10 @@ ALTER TABLE finanzas_licitacion
 - Python | tamaño: 751 bytes | LOC aprox: 23
 - Clases: ItemsLicitacionExtractor
 - Funciones: concepto, build_queries, build_prompt, parse_output
+
+### `tests/manual/runner_homologacion_manual.py`
+- Python | tamaño: 1659 bytes | LOC aprox: 43
+- Funciones: main
 
 ### `tests/manual/test_extract_items_manual.py`
 - Python — Pruebas | tamaño: 1453 bytes | LOC aprox: 38
