@@ -82,16 +82,6 @@
             text-align: left;
         }
 
-        .yes {
-            color: green;
-            font-weight: bold;
-        }
-
-        .no {
-            color: red;
-            font-weight: bold;
-        }
-
         .footer-note {
             font-size: 12px;
             color: #666;
@@ -150,113 +140,100 @@
     </div>
 </div>
 
-<!-- ================= GARANTÍAS ================= -->
-<h2>3. Garantías</h2>
+<!-- ================= ÍTEMS SOLICITADOS ================= -->
+<h2>4. Ítems Solicitados</h2>
 <div class="form-section">
-    <div class="form-grid">
-        <div class="form-group">
-            <label>Garantía seriedad de la oferta</label>
-            <input class="readonly" value="{{ licitacion.garantia_oferta or '' }}" readonly>
-        </div>
-        <div class="form-group">
-            <label>Garantía fiel cumplimiento</label>
-            <input class="readonly" value="{{ licitacion.garantia_cumplimiento or '' }}" readonly>
-        </div>
-    </div>
-</div>
-
-<!-- ================= ÍTEMS ================= -->
-<h2>4. Ítems Solicitados (Sección Crítica)</h2>
-<div class="row mt-5">
-  <div class="col-12">
-    <h4>Ítems Solicitados</h4>
-    {% if items %}
-    <div class="table-responsive">
-      <table class="table table-bordered table-striped mt-3">
-        <thead class="table-light">
-          <tr>
+{% if items %}
+<table>
+    <thead>
+        <tr>
             <th style="width:5%">N°</th>
             <th style="width:25%">Producto / Servicio</th>
             <th style="width:10%">Cantidad</th>
             <th style="width:10%">Unidad</th>
             <th style="width:50%">Descripción</th>
-          </tr>
-        </thead>
-        <tbody>
-          {% for item in items %}
-          <tr>
+        </tr>
+    </thead>
+    <tbody>
+        {% for item in items %}
+        <tr>
             <td>{{ loop.index }}</td>
             <td>{{ item.nombre_item or '' }}</td>
             <td>{{ item.cantidad or '' }}</td>
             <td>{{ item.unidad or '' }}</td>
             <td>{{ item.descripcion or '' }}</td>
-          </tr>
-          {% endfor %}
-        </tbody>
-      </table>
-    </div>
-    {% else %}
-      <p>No hay ítems asociados a esta licitación.</p>
-    {% endif %}
-  </div>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% else %}
+<p>No hay ítems asociados a esta licitación.</p>
+{% endif %}
 </div>
 
+<!-- ================= ÍTEMS HOMOLOGADOS ================= -->
 <h2>4.1 Ítems Homologados (Vista Expandible por Ítem)</h2>
 
 {% if homologaciones %}
-<div class="table-responsive">
-<table class="table table-bordered table-striped mt-3">
-    <thead class="table-light">
-    <tr>
-        <th colspan="3">Items Solicitados</th>
-        <th colspan="9">Items Homologados</th>
-    </tr>
-    <tr>
-        <th>N° Item Solicitado</th>
-        <th>Ítem Solicitado</th>
-        <th>Cantidad</th>
-        <th>Seleccionar</th>
-        <th>Ranking</th>
-        <th>Código</th>
-        <th>Nombre</th>
-        <th>Descripción</th>
-        <th>Stock</th>
-        <th>Ubicación</th>
-        <th>Score</th>
-        <th>Razonamiento</th>
-    </tr>
+<div class="form-section">
+<table>
+    <thead>
+        <tr>
+            <th colspan="3">Ítems Solicitados</th>
+            <th colspan="9">Ítems Homologados</th>
+        </tr>
+        <tr>
+            <th>N°</th>
+            <th>Ítem</th>
+            <th>Cantidad</th>
+            <th>Seleccionar</th>
+            <th>Ranking</th>
+            <th>Código</th>
+            <th>Nombre</th>
+            <th>Descripción</th>
+            <th>Stock</th>
+            <th>Ubicación</th>
+            <th>Score</th>
+            <th>Razonamiento</th>
+        </tr>
     </thead>
     <tbody>
+
     {% for item in homologaciones %}
+        {% set item_index = loop.index %}
         {% set num_candidatos = item.candidatos|length if item.candidatos else 1 %}
+
         {% if item.candidatos %}
             {% for candidato in item.candidatos %}
             <tr>
                 {% if loop.first %}
-                <td rowspan="{{ num_candidatos }}">{{ loop.parent.loop.index }}</td>
+                <td rowspan="{{ num_candidatos }}">{{ item_index }}</td>
                 <td rowspan="{{ num_candidatos }}">{{ item.nombre_item or item.item_key or '' }}</td>
                 <td rowspan="{{ num_candidatos }}">{{ item.cantidad or '' }}</td>
                 {% endif %}
-                <td><input type="checkbox" name="candidato_{{ item.homologacion_id }}_{{ candidato.ranking }}"></td>
+                <td>
+                    <input type="checkbox" name="candidato_{{ item.homologacion_id }}_{{ candidato.ranking }}">
+                </td>
                 <td>{{ candidato.ranking or '' }}</td>
                 <td>{{ candidato.codigo or '' }}</td>
                 <td>{{ candidato.nombre or '' }}</td>
                 <td>{{ candidato.descripcion or '' }}</td>
                 <td>{{ candidato.stock or '' }}</td>
                 <td>{{ candidato.ubicacion or '' }}</td>
-                <td>{{ '%.2f'|format(candidato.score) if candidato.score else '' }}</td>
+                <td>{{ '%.2f'|format(candidato.score) if candidato.score is not none else '' }}</td>
                 <td>{{ candidato.razonamiento or '' }}</td>
             </tr>
             {% endfor %}
         {% else %}
             <tr>
-                <td>{{ loop.index }}</td>
+                <td>{{ item_index }}</td>
                 <td>{{ item.nombre_item or item.item_key or '' }}</td>
                 <td>{{ item.cantidad or '' }}</td>
                 <td colspan="9"><em>Sin candidatos homologados</em></td>
             </tr>
         {% endif %}
     {% endfor %}
+
     </tbody>
 </table>
 </div>
@@ -266,23 +243,6 @@
     <p class="footer-note">Ejecute el proceso de homologación para ver los productos candidatos.</p>
 </div>
 {% endif %}
-
-
-
-<!-- ================= CRITERIOS ================= -->
-<h2>5. Criterios de Evaluación</h2>
-<div class="form-section">
-    <div class="form-grid">
-        <div class="form-group">
-            <label>Precio</label>
-            <input class="readonly" value="{{ licitacion.criterio_precio or '' }}" readonly>
-        </div>
-        <div class="form-group">
-            <label>Plazo de entrega</label>
-            <input class="readonly" value="{{ licitacion.criterio_plazo or '' }}" readonly>
-        </div>
-    </div>
-</div>
 
 <!-- ================= OBSERVACIONES ================= -->
 <h2>6. Observaciones Generales</h2>
