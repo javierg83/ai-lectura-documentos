@@ -87,13 +87,19 @@ def homologar_productos_para_licitacion(
         modelo
     )
 
+    # IMPORTANTE: Priorizar item_key sobre nombre_item para mantener consistencia
+    # con la tabla items_licitacion y el JOIN en obtener_items_homologados_con_candidatos
     items_detectados = [
         {
-            "item_key": item.get("nombre_item") or item.get("item_key"),
+            "item_key": item.get("item_key") or item.get("nombre_item"),
             "descripcion_detectada": item.get("descripcion") or item.get("descripcion_detectada") or ""
         }
         for item in items_licitacion
     ]
+
+    logger.info("[HOMOLOGADOR] Items detectados para homologacion:")
+    for idx, item in enumerate(items_detectados):
+        logger.info(f"  [{idx+1}] item_key={item['item_key']}")
 
     prompt = build_prompt_homologacion(items_detectados, productos_catalogo)
 

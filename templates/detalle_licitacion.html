@@ -203,6 +203,7 @@
 
 <h2>4.1 Ítems Homologados (Vista Expandible por Ítem)</h2>
 
+{% if homologaciones %}
 <div class="table-responsive">
 <table class="table table-bordered table-striped mt-3">
     <thead class="table-light">
@@ -226,35 +227,45 @@
     </tr>
     </thead>
     <tbody>
-    <tr>
-        <td rowspan="2">2</td>
-        <td rowspan="2">Estanque vertical</td>
-        <td rowspan="2">1</td>
-        <th><input type="checkbox"></th>
-        <td>1</td>
-        <td>EV-10000L</td>
-        <td>Estanque Vertical 10000L</td>
-        <td>Estanque vertical reforzado, 10000 litros, HDPE, con entradas y salidas estandarizadas.</td>
-        <td>12</td>
-        <td>Bodega Central</td>
-        <td>0.93</td>
-        <td>Coincide nombre exacto, capacidad y descripción técnica detallada.</td>
-    </tr>
-    <tr>
-        <!-- Las dos primeras celdas están fusionadas arriba -->
-        <th><input type="checkbox"></th>
-        <td>2</td>
-        <td>EV-9500L</td>
-        <td>Estanque Vertical 9500L</td>
-        <td>Estanque vertical de 9500 litros, HDPE, con conexiones estándar.</td>
-        <td>4</td>
-        <td>Sucursal Sur</td>
-        <td>0.87</td>
-        <td>Alta similitud en nombre y uso, pero menor capacidad y sin refuerzo detallado.</td>
-    </tr>
+    {% for item in homologaciones %}
+        {% set num_candidatos = item.candidatos|length if item.candidatos else 1 %}
+        {% if item.candidatos %}
+            {% for candidato in item.candidatos %}
+            <tr>
+                {% if loop.first %}
+                <td rowspan="{{ num_candidatos }}">{{ loop.parent.loop.index }}</td>
+                <td rowspan="{{ num_candidatos }}">{{ item.nombre_item or item.item_key or '' }}</td>
+                <td rowspan="{{ num_candidatos }}">{{ item.cantidad or '' }}</td>
+                {% endif %}
+                <td><input type="checkbox" name="candidato_{{ item.homologacion_id }}_{{ candidato.ranking }}"></td>
+                <td>{{ candidato.ranking or '' }}</td>
+                <td>{{ candidato.codigo or '' }}</td>
+                <td>{{ candidato.nombre or '' }}</td>
+                <td>{{ candidato.descripcion or '' }}</td>
+                <td>{{ candidato.stock or '' }}</td>
+                <td>{{ candidato.ubicacion or '' }}</td>
+                <td>{{ '%.2f'|format(candidato.score) if candidato.score else '' }}</td>
+                <td>{{ candidato.razonamiento or '' }}</td>
+            </tr>
+            {% endfor %}
+        {% else %}
+            <tr>
+                <td>{{ loop.index }}</td>
+                <td>{{ item.nombre_item or item.item_key or '' }}</td>
+                <td>{{ item.cantidad or '' }}</td>
+                <td colspan="9"><em>Sin candidatos homologados</em></td>
+            </tr>
+        {% endif %}
+    {% endfor %}
     </tbody>
 </table>
 </div>
+{% else %}
+<div class="form-section">
+    <p>No hay ítems homologados para esta licitación.</p>
+    <p class="footer-note">Ejecute el proceso de homologación para ver los productos candidatos.</p>
+</div>
+{% endif %}
 
 
 

@@ -45,6 +45,8 @@ def insertar_homologacion_producto(
         modelo_usado: Modelo LLM utilizado
         fecha_homologacion: Fecha/hora de la homologacion
     """
+    print(f"[HOMOLOGACION_DB] Insertando homologacion | lid={licitacion_id} | item={item_key}")
+
     sql = """
         INSERT INTO homologaciones_productos (
             id,
@@ -72,6 +74,7 @@ def insertar_homologacion_producto(
             modelo_usado,
             fecha_homologacion
         ))
+    print(f"[HOMOLOGACION_DB] Homologacion insertada OK | item_key={item_key}")
 
 
 def insertar_candidato_homologacion(
@@ -101,6 +104,8 @@ def insertar_candidato_homologacion(
         score_similitud: Score de similitud (0.0 - 1.0)
         razonamiento: Razonamiento del LLM para este candidato
     """
+    print(f"[HOMOLOGACION_DB] Insertando candidato | hid={homologacion_id} | rank={ranking} | cod={producto_codigo}")
+
     sql = """
         INSERT INTO candidatos_homologacion (
             homologacion_id,
@@ -126,13 +131,20 @@ def insertar_candidato_homologacion(
             score_similitud,
             razonamiento
         ))
+    print(f"[HOMOLOGACION_DB] Candidato insertado OK | codigo={producto_codigo}")
 
 
 def save_homologacion_result(resultado_json: dict, conn: Optional[psycopg2.extensions.connection] = None):
     """
-    Guarda los resultados de homologación de productos en la base de datos.
-    Debe recibir una conexión activa, no la crea internamente.
+    DEPRECATED: Esta funcion usa tablas antiguas (homologaciones, homologacion_items, homologacion_candidatos).
+
+    Usar en su lugar:
+    - insertar_homologacion_producto() para insertar en homologaciones_productos
+    - insertar_candidato_homologacion() para insertar en candidatos_homologacion
+
+    Esta funcion se mantiene por compatibilidad pero NO debe usarse en codigo nuevo.
     """
+    print("[HOMOLOGACION_DB] WARNING: save_homologacion_result DEPRECATED. Usar insertar_homologacion_producto.")
     if conn is None:
         raise ValueError("Se requiere una conexión activa a la base de datos (conn)")
 

@@ -1,6 +1,7 @@
 import psycopg2
 import os
 import uuid
+import json
 from datetime import datetime
 import traceback
 
@@ -97,10 +98,35 @@ def obtener_items_por_licitacion(licitacion_id: str) -> list[dict]:
 
 
 def obtener_items_homologados_con_candidatos(licitacion_id: str) -> list[dict]:
+    """
+    Obtiene los items homologados con sus candidatos para una licitacion.
+
+    Retorna una lista de diccionarios con la estructura:
+    {
+        "homologacion_id": str (UUID para usar como ID en HTML),
+        "item_key": str,
+        "nombre_item": str,
+        "cantidad": numeric,
+        "descripcion_detectada": str,
+        "candidatos": [
+            {
+                "ranking": int,
+                "codigo": str,
+                "nombre": str,
+                "descripcion": str,
+                "stock": int,
+                "ubicacion": str,
+                "score": float,
+                "razonamiento": str
+            }
+        ]
+    }
+    """
     conn = get_pg_conn()
     cur = conn.cursor()
     try:
-        print(f"[homologacion] 🔎 Consultando items homologados con candidatos para licitación {licitacion_id}")
+        print(f"[HOMOLOGACION_READ] Consultando items homologados | licitacion_id={licitacion_id}")
+
         cur.execute("""
             SELECT
                 hp.id AS homologacion_id,
@@ -108,7 +134,6 @@ def obtener_items_homologados_con_candidatos(licitacion_id: str) -> list[dict]:
                 hp.descripcion_detectada,
                 il.nombre_item,
                 il.cantidad,
-
                 ch.ranking,
                 ch.producto_codigo,
                 ch.producto_nombre,
@@ -118,28 +143,37 @@ def obtener_items_homologados_con_candidatos(licitacion_id: str) -> list[dict]:
                 ch.score_similitud,
                 ch.razonamiento
             FROM homologaciones_productos hp
-            INNER JOIN items_licitacion il
+            LEFT JOIN items_licitacion il
                 ON il.licitacion_id = hp.licitacion_id::text
-               AND LOWER(il.item_key) = LOWER(hp.item_key)
+               AND (
+                   LOWER(TRIM(il.item_key)) = LOWER(TRIM(hp.item_key))
+                   OR LOWER(TRIM(il.nombre_item)) = LOWER(TRIM(hp.item_key))
+               )
             LEFT JOIN candidatos_homologacion ch
                 ON ch.homologacion_id = hp.id
             WHERE hp.licitacion_id = %s
-            ORDER BY il.id, ch.ranking
+            ORDER BY hp.fecha_homologacion DESC, hp.item_key, ch.ranking
         """, (str(licitacion_id),))
 
         rows = cur.fetchall()
-        print(f"[homologacion] 📦 Filas encontradas en query: {len(rows)}")
+        print(f"[HOMOLOGACION_READ] Filas encontradas en query: {len(rows)}")
 
         items_dict = {}
 
         for r in rows:
-            homologacion_id = r[0]
+            homologacion_id = str(r[0])
+            item_key = r[1]
+            descripcion_detectada = r[2]
+            nombre_item = r[3] or item_key
+            cantidad = r[4]
 
             if homologacion_id not in items_dict:
                 items_dict[homologacion_id] = {
-                    "nombre_item": r[3],
-                    "cantidad": r[4],
-                    "descripcion_detectada": r[2],
+                    "homologacion_id": homologacion_id,
+                    "item_key": item_key,
+                    "nombre_item": nombre_item,
+                    "cantidad": cantidad,
+                    "descripcion_detectada": descripcion_detectada,
                     "candidatos": []
                 }
 
@@ -156,12 +190,16 @@ def obtener_items_homologados_con_candidatos(licitacion_id: str) -> list[dict]:
                 })
 
         resultados = list(items_dict.values())
-        print(f"[homologacion] ✅ Total items homologados detectados: {len(resultados)}")
+
+        print(f"[HOMOLOGACION_READ] Total items homologados: {len(resultados)}")
+        for idx, item in enumerate(resultados):
+            print(f"[HOMOLOGACION_READ]   [{idx+1}] item={item['item_key']} | candidatos={len(item['candidatos'])}")
+
         if resultados:
-            print("[homologacion] 🧪 Primer item (debug):")
-            print(json.dumps(resultados[0], indent=2, ensure_ascii=False))  # muestra 1 para no saturar
+            print("[HOMOLOGACION_READ] Estructura primer item (debug):")
+            print(json.dumps(resultados[0], indent=2, ensure_ascii=False, default=str))
         else:
-            print("[homologacion] ⚠️ No se encontraron items homologados")
+            print("[HOMOLOGACION_READ] No se encontraron items homologados para esta licitacion")
 
         return resultados
 
