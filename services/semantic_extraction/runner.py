@@ -199,15 +199,26 @@ def run_semantic_extraction(
 
     finally:
         cur.close()
-        conn.close()
 
-    pg_conn = _get_pg_conn()
     try:
         if concepto == "ITEMS_LICITACION":
             from services.licitacion_service import guardar_items_licitacion, guardar_especificaciones_tecnicas
-            guardar_items_licitacion(pg_conn, licitacion_id, semantic_run_id, result["items"])
+            guardar_items_licitacion(conn, licitacion_id, semantic_run_id, result["items"])
             if "item_especificaciones" in result:
-                guardar_especificaciones_tecnicas(pg_conn, semantic_run_id, result["item_especificaciones"])
+                guardar_especificaciones_tecnicas(conn, semantic_run_id, result["item_especificaciones"])
+
+            # Ejecutar homologación automática
+            if result.get("items"):
+                try:
+                    from services.homologacion.homologacion_service import ejecutar_homologacion_automatica
+                    homologacion_resultado = ejecutar_homologacion_automatica(
+                        licitacion_id=licitacion_id,
+                        conn=conn,
+                        modelo="gpt-4o"
+                    )
+                    print(f"[✅] Homologación ejecutada correctamente | items_con_match={homologacion_resultado.get('resumen', {}).get('total_items_con_match', 0)}")
+                except Exception as e:
+                    print(f"[⚠️] Error en proceso de homologación automática: {str(e)}")
 
         elif concepto == "FINANZAS_LICITACION":
             from services.licitacion_service import guardar_finanzas_licitacion
@@ -215,7 +226,7 @@ def run_semantic_extraction(
             now = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
             print(f"[{now}] 🏦 Procesando resultado de FINANZAS_LICITACION para licitacion_id={licitacion_id}")
             try:
-                guardar_finanzas_licitacion(pg_conn, licitacion_id, result["finanzas"])
+                guardar_finanzas_licitacion(conn, licitacion_id, result["finanzas"])
                 print(f"[{now}] ✅ Datos financieros guardados correctamente en BD")
             except Exception as e:
                 print(f"[{now}] ❌ Error al guardar datos financieros: {str(e)}")
@@ -228,7 +239,7 @@ def run_semantic_extraction(
                 result.get("datos_basicos", {})
             )
     finally:
-        pg_conn.close()
+        conn.close()
 
     return {
         "status": "OK",
@@ -243,20 +254,38 @@ if __name__ == "__main__":
         sys.exit(1)
 
     concepto = sys.argv[1].strip().upper()
-    doc_id = sys.argv[2].strip()
-    lic_id = sys.argv[3] if len(sys.argv) >= 4 else "testing-uuid"
 
-    try:
-        print(f"[🧪 CLI] Ejecutando extracción para '{concepto}' sobre documento: {doc_id}")
-        run_semantic_extraction(
-            licitacion_id=lic_id,
-            concepto=concepto,
-            documento_ids=[doc_id],
-            nombre_licitacion=doc_id,
-            top_k=30,
-            min_score=0.15,
-            prompt_version="prompt_items_licitacion_v1.txt",
-            extractor_version="dev_test"
-        )
-    except Exception as e:
-        print(f"[❌ ERROR CLI] {e}")
+    if concepto == "HOMOLOGACION":
+        lic_id = sys.argv[2]
+        from services.homologacion.homologacion_service import ejecutar_homologacion_automatica
+        print(f"[🧪 CLI] Ejecutando homologación automática para licitación: {lic_id}")
+        conn = _get_pg_conn()
+        try:
+            resultado = ejecutar_homologacion_automatica(
+                licitacion_id=lic_id,
+                conn=conn,
+                modelo="gpt-4o"
+            )
+            print("[✅] Resultado homologación:")
+            print(json.dumps(resultado, indent=2, ensure_ascii=False))
+        except Exception as e:
+            print(f"[❌] Error en ejecución de homologación: {str(e)}")
+        finally:
+            conn.close()
+    else:
+        doc_id = sys.argv[2].strip()
+        lic_id = sys.argv[3] if len(sys.argv) >= 4 else "testing-uuid"
+        try:
+            print(f"[🧪 CLI] Ejecutando extracción para '{concepto}' sobre documento: {doc_id}")
+            run_semantic_extraction(
+                licitacion_id=lic_id,
+                concepto=concepto,
+                documento_ids=[doc_id],
+                nombre_licitacion=doc_id,
+                top_k=30,
+                min_score=0.15,
+                prompt_version="prompt_items_licitacion_v1.txt",
+                extractor_version="dev_test"
+            )
+        except Exception as e:
+            print(f"[❌ ERROR CLI] {e}")

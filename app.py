@@ -15,7 +15,8 @@ from services.licitacion_service import (
     obtener_licitacion_por_id,
     obtener_items_por_licitacion,
     obtener_todas_las_licitaciones,
-    obtener_finanzas_por_licitacion  # ✅ nuevo
+    obtener_finanzas_por_licitacion,
+    obtener_items_homologados_con_candidatos,  # ✅
 )
 
 app.register_blueprint(extraction_bp)
@@ -31,11 +32,9 @@ def home():
 # ✅ Ruta adicional para servir PDFs desde archivos_texto/<doc_id>/<archivo>.pdf
 @app.route('/archivos_texto/<path:subpath>')
 def serve_archivos_texto(subpath):
-    # Ojo: esto sirve archivos desde /static/archivos_texto.
-    # Si tus PDFs están en otro lado, revisa esta ruta.
     return app.send_static_file('archivos_texto/' + subpath)
 
-# ✅ Nueva ruta para listado de licitaciones
+# ✅ Ruta para listado de licitaciones
 @app.route('/licitaciones')
 def licitaciones():
     print("[app] 📋 Renderizando licitaciones.html")
@@ -57,15 +56,33 @@ def api_licitaciones():
         })
     return jsonify(result)
 
-# ✅ Ruta para detalle de licitación con finanzas y fallback si no hay datos
+# ✅ Ruta para detalle de licitación (incluye ítems homologados)
 @app.route('/detalle_licitacion/<uuid:licitacion_id>')
 def detalle_licitacion(licitacion_id):
+    print(f"[app] 🔎 Renderizando detalle_licitacion para {licitacion_id}")
+
+    # --- Datos base ---
     licitacion = obtener_licitacion_por_id(licitacion_id)
     if licitacion is None:
-        licitacion = {}  # ✅ fallback defensivo
+        licitacion = {}
+
     items = obtener_items_por_licitacion(licitacion_id)
-    finanzas = obtener_finanzas_por_licitacion(licitacion_id)  # ✅ nuevos datos
-    return render_template('detalle_licitacion.html', licitacion=licitacion, items=items, finanzas=finanzas)
+    finanzas = obtener_finanzas_por_licitacion(licitacion_id)
+
+    # --- Ítems homologados con candidatos ---
+    homologaciones = obtener_items_homologados_con_candidatos(licitacion_id)
+
+    print(f"[app] 📦 Homologaciones cargadas → total: {len(homologaciones)}")
+    for h in homologaciones:
+        print(f"  🧩 {h['nombre_item']} | candidatos={len(h['candidatos'])}")
+
+    return render_template(
+        'detalle_licitacion.html',
+        licitacion=licitacion,
+        items=items,
+        finanzas=finanzas,
+        homologaciones=homologaciones,
+    )
 
 if __name__ == '__main__':
     print("[app] ✅ Flask corriendo en 0.0.0.0:5000 (debug=True)")

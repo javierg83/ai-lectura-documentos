@@ -95,6 +95,80 @@ def obtener_items_por_licitacion(licitacion_id: str) -> list[dict]:
         cur.close()
         conn.close()
 
+
+def obtener_items_homologados_con_candidatos(licitacion_id: str) -> list[dict]:
+    conn = get_pg_conn()
+    cur = conn.cursor()
+    try:
+        print(f"[homologacion] 🔎 Consultando items homologados con candidatos para licitación {licitacion_id}")
+        cur.execute("""
+            SELECT
+                hp.id AS homologacion_id,
+                hp.item_key,
+                hp.descripcion_detectada,
+                il.nombre_item,
+                il.cantidad,
+
+                ch.ranking,
+                ch.producto_codigo,
+                ch.producto_nombre,
+                ch.producto_descripcion,
+                ch.stock_disponible,
+                ch.ubicacion_stock,
+                ch.score_similitud,
+                ch.razonamiento
+            FROM homologaciones_productos hp
+            INNER JOIN items_licitacion il
+                ON il.licitacion_id = hp.licitacion_id::text
+               AND LOWER(il.item_key) = LOWER(hp.item_key)
+            LEFT JOIN candidatos_homologacion ch
+                ON ch.homologacion_id = hp.id
+            WHERE hp.licitacion_id = %s
+            ORDER BY il.id, ch.ranking
+        """, (str(licitacion_id),))
+
+        rows = cur.fetchall()
+        print(f"[homologacion] 📦 Filas encontradas en query: {len(rows)}")
+
+        items_dict = {}
+
+        for r in rows:
+            homologacion_id = r[0]
+
+            if homologacion_id not in items_dict:
+                items_dict[homologacion_id] = {
+                    "nombre_item": r[3],
+                    "cantidad": r[4],
+                    "descripcion_detectada": r[2],
+                    "candidatos": []
+                }
+
+            if r[5] is not None:
+                items_dict[homologacion_id]["candidatos"].append({
+                    "ranking": r[5],
+                    "codigo": r[6],
+                    "nombre": r[7],
+                    "descripcion": r[8],
+                    "stock": r[9],
+                    "ubicacion": r[10],
+                    "score": float(r[11]) if r[11] is not None else None,
+                    "razonamiento": r[12]
+                })
+
+        resultados = list(items_dict.values())
+        print(f"[homologacion] ✅ Total items homologados detectados: {len(resultados)}")
+        if resultados:
+            print("[homologacion] 🧪 Primer item (debug):")
+            print(json.dumps(resultados[0], indent=2, ensure_ascii=False))  # muestra 1 para no saturar
+        else:
+            print("[homologacion] ⚠️ No se encontraron items homologados")
+
+        return resultados
+
+    finally:
+        cur.close()
+        conn.close()
+
 # --------------------------------------------------
 # FUNCIONES DE PERSISTENCIA
 # --------------------------------------------------
