@@ -2,20 +2,26 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8">
-  <title>Extracción de Documentos</title>
+  <title>Subida de Licitaciones</title>
   <link rel="stylesheet" href="/static/css/style.css">
 </head>
 <body>
   <div class="container">
-    <h1>Extracción de Documentos</h1>
+    <h1>Subida de Licitaciones</h1>
 
     <form id="formulario-extraccion" action="/api/extraccion" method="POST" enctype="multipart/form-data">
+
+      <div class="form-group">
+        <label for="paginas">Nombre Licitacion:</label>
+        <input type="text" id="paginas1" name="paginas1" placeholder="Opcional">
+      </div>
+
       <div class="form-group">
         <label for="archivo">Selecciona un archivo PDF:</label>
         <input type="file" id="archivo" name="archivo" accept=".pdf" required>
       </div>
 
-      <div class="form-group">
+      <div class="form-group" style="display:none">
         <label for="tipo_extraccion">Tipo de extracción:</label>
         <select name="tipo_extraccion" id="tipo_extraccion">
           <option value="ia">Uso de IA</option>
@@ -23,7 +29,7 @@
         </select>
       </div>
 
-      <div class="form-group">
+      <div class="form-group" style="display:none">
         <label for="read_all">Leer todas las páginas:</label>
         <select name="read_all" id="read_all">
           <option value="true">Sí</option>
@@ -31,7 +37,7 @@
         </select>
       </div>
 
-      <div class="form-group">
+      <div class="form-group" style="display:none">
         <label for="paginas">Páginas específicas (ej: 1,3,5):</label>
         <input type="text" id="paginas" name="paginas" placeholder="Opcional">
       </div>

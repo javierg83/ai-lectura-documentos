@@ -9,6 +9,7 @@ import openai
 from config import API_KEY
 from pdf_utils import extract_page_image
 from tiktoken import encoding_for_model, get_encoding
+from image_filters import enhance_image_contrast  # NUEVO: mejora binarización imagen
 
 # Cliente OpenAI con visión habilitada
 client = openai.OpenAI(api_key=API_KEY)
@@ -17,14 +18,13 @@ client = openai.OpenAI(api_key=API_KEY)
 _request_count = 0
 
 def count_tokens(text: str, model: str = "gpt-4o-mini") -> int:
-    """Cuenta tokens como respaldo cuando usage no está disponible."""
     try:
         enc = encoding_for_model(model)
     except Exception:
         enc = get_encoding("cl100k_base")
     return len(enc.encode(text))
 
-def analyze_page_with_gpt(pdf_path: str, page_number: int, timeout: float = 60.0):
+def analyze_page_with_gpt(pdf_path: str, page_number: int, timeout: float = 60.0, enhance_contrast: bool = True):
     """
     Envía la página como imagen a GPT-4o y limpia fences Markdown.
     Retorna: elementos (lista), raw (JSON limpio), tokens_in, tokens_out.
@@ -32,15 +32,25 @@ def analyze_page_with_gpt(pdf_path: str, page_number: int, timeout: float = 60.0
     global _request_count
     _request_count += 1
 
-    print(f"[Extractor] ({_request_count}) → {datetime.now():%H:%M:%S} "
+    print(f"\n[Extractor] ({_request_count}) → {datetime.now():%H:%M:%S} "
           f"Iniciando análisis de página {page_number+1} de '{pdf_path}'")
 
-    # 1) Extraer imagen y codificar a Base64
+    # 1) Extraer imagen original
     img_bytes = extract_page_image(pdf_path, page_number)
-    img_b64 = base64.b64encode(img_bytes).decode('utf-8')
-    print(f"[Extractor]   • Imagen convertida a base64 (bytes={len(img_bytes)})")
+    print(f"[Extractor]   • Imagen original obtenida (bytes={len(img_bytes)})")
 
-    # 2) Construir prompt (completo)
+    # 2) Mejorar contraste visual (binarización)
+    if enhance_contrast:
+        img_bytes = enhance_image_contrast(img_bytes)
+        print(f"[Extractor]   • Mejora de contraste aplicada (binarización adaptativa)")
+    else:
+        print(f"[Extractor]   • Mejora de contraste DESACTIVADA")
+
+    # 3) Codificar a Base64
+    img_b64 = base64.b64encode(img_bytes).decode('utf-8')
+    print(f"[Extractor]   • Imagen convertida a base64 (largo={len(img_b64)} caracteres)")
+
+    # 4) Construir prompt
     system_msg = (
         '''
         Eres un asistente experto en analizar páginas de documentos PDF escaneados.
@@ -51,7 +61,11 @@ def analyze_page_with_gpt(pdf_path: str, page_number: int, timeout: float = 60.0
         3. Para cada 'tabla_checkbox', verificar que cada casilla haya sido correctamente leída y su estado marcado (true) o desmarcado (false), sin omitir ninguna casilla.
         4. Si encuentras imágenes, logos o firmas, además de categorizarlas, debes añadir un campo **"coordenadas"** con un objeto `{ "x": <valor>, "y": <valor>, "width": <valor>, "height": <valor> }` que indique su posición y tamaño en puntos (o la unidad que prefieras).
         5. Calcular un valor de **"confianza"** (float entre 0.0 y 1.0) que refleje cuán seguro estás de la exactitud de la extracción.
-
+        6. Si detectas que una tabla continúa desde la página anterior (por ejemplo, aparece texto estructurado como filas, pero sin encabezado de tabla), intenta reconstruir la tabla usando el encabezado anterior, y considera todos los elementos como parte de la misma tabla.
+            - Mantén la consistencia de columnas aunque no se repita el encabezado.
+            - Si el contenido parece tabla pero no tiene bordes visibles, analízalo igualmente como una tabla visual.
+            - Puedes agregar un campo "continuacion_tabla": true si es una tabla que se extiende desde otra página.
+        
         La salida debe ser un JSON con estas claves de nivel raíz:
         - titulo_pagina: texto del título detectado o cadena vacía.
         - confianza: puntuación de confianza de la extracción.
@@ -69,21 +83,9 @@ def analyze_page_with_gpt(pdf_path: str, page_number: int, timeout: float = 60.0
                 - 'imagen','logo','firma': cadena vacía.
             * coordenadas: objeto `{ "x":…, "y":…, "width":…, "height":… }` solo para tipos 'imagen','logo','firma'; para otros deja `{}`.
             * metadatos: objeto opcional con información adicional (por ejemplo, dimensiones exactas, notas).
-
-        **Ejemplo parcial de un elemento tipo firma**:
-        ```json
-        {
-        "id": "p2_e4",
-        "tipo": "firma",
-        "posicion": 4,
-        "titulo": "",
-        "descripcion": "Firma del director",
-        "contenido": "",
-        "coordenadas": { "x": 120, "y": 682, "width": 200, "height": 50 },
-        "metadatos": {}
-        }
         '''
     )
+
     messages = [
         {"role": "system", "content": system_msg},
         {"role": "user", "content": [
@@ -93,7 +95,7 @@ def analyze_page_with_gpt(pdf_path: str, page_number: int, timeout: float = 60.0
     ]
     print(f"[Extractor]   • Prompt armado, mensajes={len(messages)} entradas")
 
-    # 3) Llamada al modelo
+    # 5) Llamada al modelo
     try:
         t0 = time.time()
         print(f"[Extractor]   • {datetime.now():%H:%M:%S} Antes de OpenAI request")
@@ -109,7 +111,7 @@ def analyze_page_with_gpt(pdf_path: str, page_number: int, timeout: float = 60.0
         print(f"[Extractor]   ✖ Error o Timeout en llamada #{_request_count}: {e}")
         return [], "{}", 0, 0
 
-    # 4) Procesar respuesta
+    # 6) Procesar respuesta
     raw = resp.choices[0].message.content.strip()
     raw = re.sub(r"^```(?:json)?\s*", "", raw, flags=re.MULTILINE)
     raw = re.sub(r"\s*```$", "", raw, flags=re.MULTILINE)
@@ -117,12 +119,18 @@ def analyze_page_with_gpt(pdf_path: str, page_number: int, timeout: float = 60.0
     try:
         data = json.loads(raw)
         elementos = data.get('elementos', [])
-        print(f"[Extractor]   • JSON parseado, elementos={len(elementos)}")
+        print(f"[Extractor]   ✅ JSON parseado OK: elementos detectados = {len(elementos)}")
+
+        if not elementos:
+            print(f"[Extractor]   ⚠️  Advertencia: respuesta vacía en página {page_number+1}")
+        else:
+            tipos = set(el.get("tipo", "¿?") for el in elementos)
+            print(f"[Extractor]   🔍 Tipos encontrados: {sorted(tipos)}")
     except json.JSONDecodeError:
         print(f"[Extractor]   ✖ JSON inválido página {page_number+1}. Fragmento: {raw[:200].replace(chr(10), ' ')}…")
         elementos = []
 
-    # 5) Tokens
+    # 7) Tokens
     usage = getattr(resp, 'usage', None)
     tokens_in  = usage.prompt_tokens    if usage else count_tokens(json.dumps(messages))
     tokens_out = usage.completion_tokens if usage else count_tokens(raw)

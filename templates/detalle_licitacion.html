@@ -3,6 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <title>Detalle de Licitación</title>
+
+    <!-- Font Awesome para íconos estándar -->
+    <link rel="stylesheet"
+          href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css"
+          crossorigin="anonymous" referrerpolicy="no-referrer">
+
     <style>
         body {
             font-family: Arial, Helvetica, sans-serif;
@@ -11,6 +17,93 @@
             padding: 20px;
         }
 
+        /* ================= CABECERA ESTÁTICA DEL SISTEMA ================= */
+        .system-header {
+            display: grid;
+            grid-template-columns: auto 1fr auto auto auto;
+            gap: 20px;
+            align-items: center;
+            background: #ffffff;
+            border: 1px solid #dcdcdc;
+            padding: 15px 20px;
+            border-radius: 6px;
+            margin-bottom: 20px;
+            box-shadow: 0 1px 4px rgba(0,0,0,0.1);
+        }
+
+        .user-icon {
+            font-size: 42px;
+            color: #0b5ed7;
+        }
+
+        .user-block {
+            line-height: 1.4;
+        }
+
+        .user-block .name {
+            font-weight: bold;
+            font-size: 14px;
+        }
+
+        .user-block .role {
+            font-size: 13px;
+            color: #555;
+        }
+
+        .user-block .last-login {
+            font-size: 12px;
+            color: #777;
+        }
+
+        .licitation-block {
+            text-align: left;
+            font-size: 13px;
+        }
+
+        .licitation-block strong {
+            font-size: 14px;
+        }
+
+        .alert-block {
+            position: relative;
+            font-size: 20px;
+            color: #ff9800;
+        }
+
+        .alert-count {
+            position: absolute;
+            top: -6px;
+            right: -8px;
+            background: #d32f2f;
+            color: #fff;
+            font-size: 11px;
+            padding: 2px 6px;
+            border-radius: 50%;
+            font-weight: bold;
+        }
+
+        .alert-text {
+            font-size: 12px;
+            color: #b30000;
+            margin-top: 4px;
+        }
+
+        .logout-block a {
+            display: inline-block;
+            font-size: 13px;
+            color: #0b5ed7;
+            text-decoration: none;
+            border: 1px solid #0b5ed7;
+            padding: 6px 12px;
+            border-radius: 4px;
+        }
+
+        .logout-block a:hover {
+            background: #0b5ed7;
+            color: #fff;
+        }
+
+        /* ================= ESTILOS EXISTENTES ================= */
         h1 {
             margin-bottom: 5px;
         }
@@ -87,9 +180,139 @@
             color: #666;
             margin-top: 10px;
         }
+
+        .download-button, .submit-button {
+            background: #0b5ed7;
+            color: #fff;
+            border: none;
+            padding: 10px 16px;
+            border-radius: 4px;
+            font-size: 14px;
+            cursor: pointer;
+        }
+        .download-button:hover, .submit-button:hover {
+            background: #094db3;
+        }
+
+        .cancel-button {
+            background: #ccc;
+            color: #333;
+            border: none;
+            padding: 8px 14px;
+            border-radius: 4px;
+            font-size: 14px;
+            cursor: pointer;
+        }
+        .cancel-button:hover {
+            background: #999;
+            color: white;
+        }
+
+        /* Estilo visual del select para que combine con inputs */
+        select.styled-select {
+            padding: 8px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            font-size: 13px;
+            background-color: white;
+        }
+
+        /* Recuadro para agrupar OC y cotizaciones */
+        .file-box {
+            background: #f9f9f9;
+            border: 1px solid #ccc;
+            padding: 15px;
+            border-radius: 6px;
+            margin-top: 25px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+        }
+
+        /* Selector con estilo uniforme */
+        select.styled-select {
+            padding: 8px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            font-size: 13px;
+            background-color: white;
+        }
+
+        /* Contenedor general de cada bloque (OC / Cotizaciones) */
+        .file-box {
+            background: #f9f9f9;
+            border: 1px solid #ccc;
+            padding: 15px;
+            border-radius: 6px;
+            margin-top: 25px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+        }
+
+        /* Layout en columnas dentro del recuadro */
+        .file-box-columns {
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 20px;
+        }
+
+        /* Espaciado individual para tabla y form */
+        .file-box-column {
+            display: flex;
+            flex-direction: column;
+        }
+
+
+
+
     </style>
 </head>
 <body>
+
+<!-- ================= CABECERA DEL SISTEMA ================= -->
+<div class="system-header">
+
+    <!-- Ícono de usuario -->
+    <div class="user-icon">
+        <i class="fa-solid fa-user-circle"></i>
+    </div>
+
+    <!-- Datos del usuario -->
+    <div class="user-block">
+        <div class="name">María Contreras</div>
+        <div class="role">Analista de Compras</div>
+        <div class="last-login">
+            <i class="fa-regular fa-clock"></i>
+            Última conexión: 30-12-2025 14:52
+        </div>
+    </div>
+
+    <!-- Datos de licitación -->
+    <div class="licitation-block">
+        <div>
+            <i class="fa-solid fa-file-lines"></i>
+            <strong>{{ licitacion.codigo_licitacion or 'ND' }}</strong>
+        </div>
+        <div style="font-size:12px; color:#777;">
+            UUID: {{ licitacion.id or '00000000-0000-0000-0000-000000000000' }}
+        </div>
+    </div>
+
+    <!-- Alertas -->
+    <div>
+        <div class="alert-block">
+            <i class="fa-solid fa-bell"></i>
+            <span class="alert-count">3</span>
+        </div>
+        <div class="alert-text">Alertas pendientes</div>
+    </div>
+
+    <!-- Cerrar sesión -->
+    <div class="logout-block">
+        <a href="/logout">
+            <i class="fa-solid fa-right-from-bracket"></i>
+            Cerrar sesión
+        </a>
+    </div>
+
+</div>
 
 <h1>Detalle de Licitación</h1>
 <p><strong>Estado:</strong> {{ licitacion.estado or '' }}</p>
@@ -108,34 +331,43 @@
         </div>
         <div class="form-group">
             <label>Organismo</label>
-            <input class="readonly" value="{{ licitacion.organismo or '' }}" readonly>
+            <input class="readonly"
+                value="{{ licitacion.get('organismo', 'Organismo no disponible') }}"
+                readonly>
+
+
+
         </div>
         <div class="form-group">
             <label>Unidad solicitante</label>
-            <input class="readonly" value="{{ licitacion.unidad_solicitante or '' }}" readonly>
+            <input class="readonly" value="{{ 'DIPLAD' if licitacion.id == '2b54095a-5a9c-4510-ade8-4f426487c887' else licitacion.unidad_solicitante or '' }}" readonly>
         </div>
     </div>
 </div>
 
-<!-- ================= DATOS ECONÓMICOS ================= -->
+<!-- Dentro de la sección: Datos Económicos -->
 <h2>2. Datos Económicos</h2>
 <div class="form-section">
     <div class="form-grid">
         <div class="form-group">
             <label>Presupuesto máximo</label>
-            <input class="readonly" value="{{ finanzas.presupuesto_referencial or '' }}" readonly>
+            <input class="readonly" 
+                   value="{{ finanzas.presupuesto_referencial or licitacion.presupuesto_maximo or '' }}" readonly>
         </div>
         <div class="form-group">
             <label>Moneda de la oferta</label>
-            <input class="readonly" value="{{ finanzas.moneda or '' }}" readonly>
+            <input class="readonly" 
+                   value="{{ finanzas.moneda or licitacion.moneda or '' }}" readonly>
         </div>
         <div class="form-group">
             <label>Forma de pago</label>
-            <input class="readonly" value="{{ finanzas.forma_pago or '' }}" readonly>
+            <input class="readonly" 
+                   value="{{ finanzas.forma_pago or licitacion.forma_pago or '' }}" readonly>
         </div>
         <div class="form-group">
             <label>Plazo de pago</label>
-            <input class="readonly" value="{{ finanzas.plazo_pago or '' }}" readonly>
+            <input class="readonly" 
+                   value="{{ finanzas.plazo_pago or licitacion.plazo_pago or '' }}" readonly>
         </div>
     </div>
 </div>
@@ -143,36 +375,61 @@
 <!-- ================= ÍTEMS SOLICITADOS ================= -->
 <h2>4. Ítems Solicitados</h2>
 <div class="form-section">
-{% if items %}
-<table>
-    <thead>
-        <tr>
-            <th style="width:5%">N°</th>
-            <th style="width:25%">Producto / Servicio</th>
-            <th style="width:10%">Cantidad</th>
-            <th style="width:10%">Unidad</th>
-            <th style="width:50%">Descripción</th>
-        </tr>
-    </thead>
-    <tbody>
-        {% for item in items %}
-        <tr>
-            <td>{{ loop.index }}</td>
-            <td>{{ item.nombre_item or '' }}</td>
-            <td>{{ item.cantidad or '' }}</td>
-            <td>{{ item.unidad or '' }}</td>
-            <td>{{ item.descripcion or '' }}</td>
-        </tr>
-        {% endfor %}
-    </tbody>
-</table>
-{% else %}
-<p>No hay ítems asociados a esta licitación.</p>
+    {% if items %}
+    <div id="tabla-items-container">
+        <table id="tabla-items">
+            <thead>
+                <tr>
+                    <th style="width:5%">N°</th>
+                    <th style="width:25%">Producto / Servicio</th>
+                    <th style="width:10%">Cantidad</th>
+                    <th style="width:10%">Unidad</th>
+                    <th style="width:50%">Descripción</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in items %}
+                <tr>
+                    <td>{{ loop.index }}</td>
+                    <td>
+                        {% if 'mock' in licitacion.id %}
+                            {{ item.descripcion or '' }}
+                        {% else %}
+                            {{ item.nombre_item or '' }}
+                        {% endif %}
+                    </td>
+                    <td>{{ item.cantidad or '' }}</td>
+                    <td>{{ item.unidad or '' }}</td>
+                    <td>{{ item.descripcion or '' }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+<!-- Controles de paginación -->
+<div style="margin-top: 15px; display: flex; justify-content: space-between; align-items: center;">
+    <div>
+        <label>Ítems por página:</label>
+        <select id="items-por-pagina" onchange="cambiarItemsPorPagina()">
+            <option value="10">10</option>
+            <option value="20" selected>20</option>
+            <option value="50">50</option>
+            <option value="100">100</option>
+        </select>
+    </div>
+    <div>
+        <button onclick="paginaAnterior()">◀ Anterior</button>
+        <span id="pagina-actual">Página 1</span>
+        <button onclick="paginaSiguiente()">Siguiente ▶</button>
+    </div>
+</div> <!-- cierre de tabla-items-container -->
+</div> <!-- cierre de .form-section de Ítems Solicitados -->
 {% endif %}
-</div>
 
 <!-- ================= ÍTEMS HOMOLOGADOS ================= -->
-<h2>4.1 Ítems Homologados (Vista Expandible por Ítem)</h2>
+<h2>4.1 Ítems Homologados</h2>
+<div class="form-section">
 
 {% if homologaciones %}
 <div class="form-section">
@@ -244,11 +501,299 @@
 </div>
 {% endif %}
 
-<!-- ================= OBSERVACIONES ================= -->
-<h2>6. Observaciones Generales</h2>
+
+<!-- Botón para generar archivo XLS sin salir del formulario -->
+<div style="margin: 20px 0; display: flex; align-items: center; gap: 20px;">
+    <button type="button" class="download-button" onclick="generarXLS()">
+        <i class="fa-solid fa-download"></i> Descargar ítems seleccionados
+    </button>
+    <span id="mensaje-descarga" style="display:none; font-size:13px; color:green;">
+        <!-- Aquí se mostrará el mensaje dinámico -->
+    </span>
+
+</div> <!-- cierre tabla-items-homologados -->
+</div> <!-- cierre .form-section de Ítems Homologados -->
+
+<!-- ================= ADJUDICACIÓN LICITACIÓN ================= -->
+<h2>5. Adjudicación Licitación</h2>
 <div class="form-section">
-    <textarea class="readonly" readonly>{{ licitacion.observaciones or '' }}</textarea>
+    <form method="post" action="/adjudicar_licitacion" enctype="multipart/form-data">
+        <div class="form-grid">
+            <div class="form-group">
+                <label>Monto Adjudicado</label>
+                <input name="monto_adjudicado" type="number" placeholder="Ingrese el monto en CLP">
+            </div>
+        </div>
+
+        <!-- === Recuadro: OC === -->
+        <div class="file-box">
+            <div class="file-box-columns">
+                <!-- Tabla archivos OC -->
+                <div class="file-box-column">
+                    <strong>Órdenes de Compra Subidas</strong>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Archivo</th>
+                                <th>Sucursal</th>
+                                <th>Fecha de Subida</th>
+                                <th>Acción</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for archivo in archivos_oc %}
+                            <tr>
+                                <td><a href="{{ archivo.url }}" target="_blank">{{ archivo.nombre }}</a></td>
+                                <td>{{ archivo.sucursal }}</td>
+                                <td>{{ archivo.fecha_subida }}</td>
+                                <td>
+                                    <form method="post" action="/eliminar_archivo_oc">
+                                        <input type="hidden" name="archivo_id" value="{{ archivo.id }}">
+                                        <button type="submit" class="delete-button">Eliminar</button>
+                                    </form>
+                                </td>
+                            </tr>
+                            {% else %}
+                            <tr><td colspan="4"><em>No hay órdenes de compra registradas.</em></td></tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Formulario subir OC -->
+                <div class="file-box-column">
+                    <label><strong>Subir Orden de Compra</strong></label>
+                    <input type="file" name="archivo_oc" style="margin-bottom: 8px;">
+                    <label style="margin-top:10px;">Sucursal asociada al archivo</label>
+                    <select name="sucursal_archivo_oc" class="styled-select">
+                        <option value="">Seleccione una sucursal...</option>
+                        <option value="Sodimac Homecenter La Reina">Sodimac Homecenter La Reina</option>
+                        <option value="Sodimac Homecenter Ñuñoa">Sodimac Homecenter Ñuñoa</option>
+                        <option value="Sodimac Homecenter San Miguel">Sodimac Homecenter San Miguel</option>
+                        <option value="Sodimac Homecenter Quilicura">Sodimac Homecenter Quilicura</option>
+                        <option value="Sodimac Homecenter Rancagua">Sodimac Homecenter Rancagua</option>
+                        <option value="Sodimac Homecenter Viña del Mar">Sodimac Homecenter Viña del Mar</option>
+                        <option value="Sodimac Homecenter Concepción">Sodimac Homecenter Concepción</option>
+                        <option value="Sodimac Homecenter Antofagasta">Sodimac Homecenter Antofagasta</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+
+        <!-- === Recuadro: Cotizaciones === -->
+        <div class="file-box">
+            <div class="file-box-columns">
+                <!-- Tabla archivos cotizaciones -->
+                <div class="file-box-column">
+                    <strong>Cotizaciones Subidas</strong>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Archivo</th>
+                                <th>Sucursal</th>
+                                <th>Fecha de Subida</th>
+                                <th>Acción</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for archivo in archivos_cotizaciones %}
+                            <tr>
+                                <td><a href="{{ archivo.url }}" target="_blank">{{ archivo.nombre }}</a></td>
+                                <td>{{ archivo.sucursal }}</td>
+                                <td>{{ archivo.fecha_subida }}</td>
+                                <td>
+                                    <form method="post" action="/eliminar_archivo_cotizacion">
+                                        <input type="hidden" name="archivo_id" value="{{ archivo.id }}">
+                                        <button type="submit" class="delete-button">Eliminar</button>
+                                    </form>
+                                </td>
+                            </tr>
+                            {% else %}
+                            <tr><td colspan="4"><em>No hay cotizaciones registradas.</em></td></tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Formulario subir cotizaciones -->
+                <div class="file-box-column">
+                    <label><strong>Subir Cotización</strong></label>
+                    <input type="file" name="archivo_cotizaciones" style="margin-bottom: 8px;">
+                    <label style="margin-top:10px;">Sucursal asociada al archivo</label>
+                    <select name="sucursal_archivo_cotizacion" class="styled-select">
+                        <option value="">Seleccione una sucursal...</option>
+                        <option value="Sodimac Homecenter La Reina">Sodimac Homecenter La Reina</option>
+                        <option value="Sodimac Homecenter Ñuñoa">Sodimac Homecenter Ñuñoa</option>
+                        <option value="Sodimac Homecenter San Miguel">Sodimac Homecenter San Miguel</option>
+                        <option value="Sodimac Homecenter Quilicura">Sodimac Homecenter Quilicura</option>
+                        <option value="Sodimac Homecenter Rancagua">Sodimac Homecenter Rancagua</option>
+                        <option value="Sodimac Homecenter Viña del Mar">Sodimac Homecenter Viña del Mar</option>
+                        <option value="Sodimac Homecenter Concepción">Sodimac Homecenter Concepción</option>
+                        <option value="Sodimac Homecenter Antofagasta">Sodimac Homecenter Antofagasta</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+
+        <!-- Observaciones -->
+        <div class="form-group" style="margin-top: 30px;">
+            <label>Observaciones Adicionales</label>
+            <textarea name="observaciones_adjudicacion" placeholder="Observaciones adicionales..." rows="4"></textarea>
+        </div>
+
+        <!-- Botones de Acción -->
+        <div style="margin-top: 30px; display: flex; gap: 20px;">
+            <button type="submit" name="estado_licitacion" value="adjudicada" class="submit-button">
+                ✅ Licitación Adjudicada
+            </button>
+            <button type="submit" name="estado_licitacion" value="no_adjudicada" class="cancel-button">
+                ✖ Licitación No Adjudicada
+            </button>
+        </div>
+    </form>
 </div>
+
+
+
+<!-- SheetJS para generar XLS -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+
+<script>
+function generarXLS() {
+    const checkboxes = document.querySelectorAll('input[type="checkbox"]:checked');
+    const dataRows = [];
+
+    let currentIndex = "";
+    let currentItem = "";
+    let currentCantidad = "";
+
+    checkboxes.forEach(checkbox => {
+        const row = checkbox.closest('tr');
+        const allCells = row.querySelectorAll('td');
+
+        // Si es una fila principal (tiene columnas de ítem)
+        if (allCells.length === 12) {
+            currentIndex = allCells[0]?.innerText.trim();
+            currentItem = allCells[1]?.innerText.trim();
+            currentCantidad = allCells[2]?.innerText.trim();
+
+            dataRows.push([
+                currentIndex,
+                currentItem,
+                currentCantidad,
+                "✅",                              // Seleccionado
+                allCells[4]?.innerText.trim(),     // Ranking
+                allCells[5]?.innerText.trim(),     // Código
+                allCells[6]?.innerText.trim(),     // Nombre
+                allCells[7]?.innerText.trim(),     // Descripción
+                allCells[8]?.innerText.trim(),     // Stock
+                allCells[9]?.innerText.trim(),     // Ubicación
+                allCells[10]?.innerText.trim(),    // Score
+                allCells[11]?.innerText.trim()     // Razonamiento
+            ]);
+        } else if (allCells.length === 9) {
+            // Fila secundaria (solo tiene datos del candidato)
+            dataRows.push([
+                currentIndex,
+                currentItem,
+                currentCantidad,
+                "✅",                              // Seleccionado
+                allCells[1]?.innerText.trim(),     // Ranking
+                allCells[2]?.innerText.trim(),     // Código
+                allCells[3]?.innerText.trim(),     // Nombre
+                allCells[4]?.innerText.trim(),     // Descripción
+                allCells[5]?.innerText.trim(),     // Stock
+                allCells[6]?.innerText.trim(),     // Ubicación
+                allCells[7]?.innerText.trim(),     // Score
+                allCells[8]?.innerText.trim()      // Razonamiento
+            ]);
+        }
+    });
+
+    if (dataRows.length === 0) {
+        alert("Debe seleccionar al menos un ítem para descargar.");
+        return;
+    }
+
+    const header1 = ["Ítems Solicitados", "", "", "", "Ítems Homologados", "", "", "", "", "", "", ""];
+    const header2 = ["N°", "Ítem", "Cantidad", "Seleccionar", "Ranking", "Código", "Nombre", "Descripción", "Stock", "Ubicación", "Score", "Razonamiento"];
+
+    const fullData = [header1, header2, ...dataRows];
+    const worksheet = XLSX.utils.aoa_to_sheet(fullData);
+
+    worksheet["!merges"] = [
+        { s: { r: 0, c: 0 }, e: { r: 0, c: 3 } },
+        { s: { r: 0, c: 4 }, e: { r: 0, c: 11 } }
+    ];
+
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Ítems Seleccionados");
+
+    XLSX.writeFile(workbook, "items_homologados.xlsx");
+
+    const mensaje = document.getElementById('mensaje-descarga');
+    mensaje.innerText = "✅ Archivo descargado correctamente. Puedes cambiar la licitación a 'Pendiente de Gestión'.";
+    mensaje.style.display = "inline-block";
+}
+</script>
+
+
+<script>
+let itemsPorPagina = 20;
+let pagina = 1;
+
+function mostrarPagina() {
+    const tabla = document.getElementById("tabla-items");
+    if (!tabla) return;
+
+    const filas = tabla.querySelectorAll("tbody tr");
+    const total = filas.length;
+
+    const totalPaginas = Math.ceil(total / itemsPorPagina);
+    if (pagina > totalPaginas) pagina = totalPaginas;
+
+    const inicio = (pagina - 1) * itemsPorPagina;
+    const fin = pagina * itemsPorPagina;
+
+    filas.forEach((fila, i) => {
+        fila.style.display = (i >= inicio && i < fin) ? "" : "none";
+    });
+
+    document.getElementById("pagina-actual").innerText = `Página ${pagina} de ${totalPaginas}`;
+}
+
+function paginaAnterior() {
+    if (pagina > 1) {
+        pagina--;
+        mostrarPagina();
+    }
+}
+
+function paginaSiguiente() {
+    const tabla = document.getElementById("tabla-items");
+    const filas = tabla.querySelectorAll("tbody tr").length;
+    const totalPaginas = Math.ceil(filas / itemsPorPagina);
+
+    if (pagina < totalPaginas) {
+        pagina++;
+        mostrarPagina();
+    }
+}
+
+function cambiarItemsPorPagina() {
+    const select = document.getElementById("items-por-pagina");
+    itemsPorPagina = parseInt(select.value);
+    pagina = 1;
+    mostrarPagina();
+}
+
+// Esperar a que esté todo cargado
+document.addEventListener("DOMContentLoaded", function () {
+    mostrarPagina();
+});
+</script>
+
+
 
 </body>
 </html>

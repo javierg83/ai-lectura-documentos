@@ -1,0 +1,1004 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Control Room – Licitaciones</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <!-- Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+  <style>
+    body {
+      margin: 0;
+      font-family: Roboto, Arial, sans-serif;
+      background-color: #f4f6f9;
+      color: #333;
+    }
+
+    header {
+      background: #1e3a8a;
+      color: #fff;
+      padding: 16px 24px;
+      font-size: 20px;
+      font-weight: bold;
+    }
+
+    .container {
+      max-width: 1500px;
+      margin: 0 auto;
+      padding: 20px;
+    }
+
+    /* KPIs */
+    .kpi-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 16px;
+      margin-bottom: 30px;
+    }
+
+    .kpi-card {
+      background: #fff;
+      border-radius: 8px;
+      padding: 16px;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+    }
+
+    .kpi-title {
+      font-size: 13px;
+      color: #6b7280;
+    }
+
+    .kpi-value {
+      font-size: 26px;
+      font-weight: bold;
+      color: #1e3a8a;
+    }
+
+    /* Sections */
+    .section {
+      background: #fff;
+      border-radius: 8px;
+      padding: 24px;
+      margin-bottom: 30px;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+    }
+
+    .section h2 {
+      margin-top: 0;
+      font-size: 18px;
+      margin-bottom: 20px;
+      color: #1e3a8a;
+    }
+
+    .subtle {
+      color: #6b7280;
+      font-size: 13px;
+      margin-top: -12px;
+      margin-bottom: 18px;
+    }
+
+    .chart-full {
+      width: 100%;
+      height: 360px;
+    }
+
+    .charts-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 30px;
+    }
+
+    canvas {
+      max-height: 340px;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 14px;
+      margin-bottom: 16px;
+    }
+
+    th, td {
+      padding: 10px;
+      border-bottom: 1px solid #e5e7eb;
+      text-align: left;
+    }
+
+    th {
+      background: #f1f5f9;
+      color: #1e3a8a;
+    }
+
+    tbody tr:hover {
+      background: #f9fafb;
+    }
+
+    /* Alertas */
+    .alerts-grid {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 10px;
+      margin-bottom: 18px;
+    }
+
+    .alert {
+      padding: 12px 14px;
+      border-radius: 8px;
+      font-size: 14px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+    }
+
+    .alert-danger {
+      background: #fef2f2;
+      border-left: 6px solid #ef4444;
+    }
+
+    .alert-warning {
+      background: #fff7ed;
+      border-left: 6px solid #f59e0b;
+    }
+
+    .alert-info {
+      background: #eff6ff;
+      border-left: 6px solid #3b82f6;
+    }
+
+    .alert strong {
+      color: #111827;
+    }
+
+    ul {
+      margin-top: 8px;
+      padding-left: 18px;
+      color: #374151;
+    }
+
+    li {
+      margin-bottom: 6px;
+    }
+
+    footer {
+      text-align: center;
+      padding: 16px;
+      font-size: 12px;
+      color: #6b7280;
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  Control Room – Licitaciones
+</header>
+
+<div class="container">
+
+  <!-- KPIs -->
+  <div class="kpi-grid">
+    <div class="kpi-card">
+      <div class="kpi-title">Licitaciones cargadas</div>
+      <div class="kpi-value" id="kpi-cargadas">128</div>
+    </div>
+
+    <div class="kpi-card">
+      <div class="kpi-title">En proceso</div>
+      <div class="kpi-value" id="kpi-en-proceso">54</div>
+    </div>
+
+    <div class="kpi-card">
+      <div class="kpi-title">Adjudicadas</div>
+      <div class="kpi-value" id="kpi-adjudicadas">32</div>
+    </div>
+
+    <div class="kpi-card">
+      <div class="kpi-title">Monto total licitado (Presupuesto máximo)</div>
+      <div class="kpi-value" id="kpi-presupuesto">$15.000.000</div>
+    </div>
+
+    <div class="kpi-card">
+      <div class="kpi-title">Monto total adjudicado</div>
+      <div class="kpi-value" id="kpi-adjudicado">$8.000.000</div>
+    </div>
+  </div>
+
+  <!-- RESUMEN PIPELINE LICITACIONES -->
+  <div class="section">
+    <h2>Resumen del pipeline de licitaciones</h2>
+    <div class="subtle">
+      Distribución de las licitaciones cargadas por etapa del proceso (universo = 100%).
+    </div>
+
+    <div class="kpi-grid">
+
+      <div class="kpi-card">
+        <div class="kpi-title">Total licitaciones</div>
+        <div class="kpi-value" id="pipe-total">0</div>
+      </div>
+
+      <div class="kpi-card">
+        <div class="kpi-title">Sin asignar</div>
+        <div class="kpi-value" id="pipe-sin-asignar">0</div>
+      </div>
+
+      <div class="kpi-card">
+        <div class="kpi-title">En análisis</div>
+        <div class="kpi-value" id="pipe-analisis">0</div>
+      </div>
+
+      <div class="kpi-card">
+        <div class="kpi-title">En evaluación</div>
+        <div class="kpi-value" id="pipe-evaluacion">0</div>
+      </div>
+
+      <div class="kpi-card">
+        <div class="kpi-title">Adjudicadas</div>
+        <div class="kpi-value" id="pipe-adjudicadas">0</div>
+      </div>
+
+      <div class="kpi-card">
+        <div class="kpi-title">No adjudicadas</div>
+        <div class="kpi-value" id="pipe-no-adjudicadas">0</div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- FUNNEL -->
+  <div class="section">
+    <h2>Funnel de evolución de licitaciones</h2>
+    <div class="subtle">Visualización tipo funnel (barras horizontales) para ver caída por etapa.</div>
+    <canvas id="chartFunnel" class="chart-full"></canvas>
+  </div>
+
+  <!-- FINANZAS -->
+  <div class="section">
+    <h2>Métricas Financieras</h2>
+    <div class="subtle">Montos y distribución de estados (mock).</div>
+    <div class="charts-grid">
+      <canvas id="chartFinanzas"></canvas>
+      <canvas id="chartEstados"></canvas>
+    </div>
+  </div>
+
+  <!-- USO DEL SISTEMA -->
+  <div class="section">
+    <h2>Uso del sistema – Licitaciones cargadas mensualmente</h2>
+    <div class="subtle">Mide adopción/uso a lo largo del tiempo (mock).</div>
+    <canvas id="chartUsoMensual" class="chart-full"></canvas>
+  </div>
+
+  <!-- RENDIMIENTO POR USUARIO (EFICIENCIA Y RESULTADOS) -->
+  <div class="section">
+    <h2>Rendimiento por Usuario</h2>
+    <div class="subtle">
+      Métricas de adjudicación y efectividad basadas en licitaciones y sus ítems asociados.
+    </div>
+
+    <table id="tabla-rendimiento-usuario">
+      <thead>
+        <tr>
+          <th>Usuario</th>
+          <th>Total licitaciones</th>
+          <th>Licitaciones adjudicadas</th>
+          <th>Monto adjudicado (CLP)</th>
+          <th>Total items</th>
+          <th>Items adjudicados</th>
+          <th>% Éxito items</th>
+          <th>% Éxito licitaciones</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <div id="grafico-rendimiento-detalle" class="section"></div>
+
+
+  <!-- SEGUIMIENTO POR USUARIO (TABLA) -->
+  <div class="section">
+    <h2>Seguimiento por Usuario</h2>
+    <div class="subtle">Tabla de control para ver carga, avance y resultados por usuario (mock).</div>
+
+    <table id="tabla-seguimiento-usuario">
+      <thead>
+        <tr>
+          <th>Usuario</th>
+          <th>Licitaciones cargadas</th>
+          <th>En proceso</th>
+          <th>Adjudicadas</th>
+          <th>No adjudicadas</th>
+          <th>% Adjudicación</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+
+    <div class="subtle">Distribución gráfica del avance por usuario.</div>
+    <canvas id="chartSeguimientoUsuario" class="chart-full"></canvas>
+  </div>
+
+
+  <!-- NUEVA SECCIÓN: Ítems más cotizados -->
+  <div class="section">
+    <h2>Ítems / Productos más cotizados</h2>
+    <div class="subtle">Ranking de demanda (veces cotizado) para priorizar propuestas y homologación (mock).</div>
+    <table id="tabla-mas-cotizados">
+      <thead>
+        <tr>
+          <th>Ítem / Producto</th>
+          <th>Veces cotizado</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+    <canvas id="chartMasCotizados" class="chart-full"></canvas>
+  </div>
+  
+  
+  <!-- NUEVA SECCIÓN: Ítems más adjudicados -->
+  <div class="section">
+    <h2>Ítems / Productos más adjudicados</h2>
+    <div class="subtle">Ranking de éxito (veces adjudicado) para focalizar estrategia comercial (mock).</div>
+    <table id="tabla-mas-adjudicados">
+      <thead>
+        <tr>
+          <th>Ítem / Producto</th>
+          <th>Veces adjudicado</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+    <canvas id="chartMasAdjudicados" class="chart-full"></canvas>
+  </div>
+
+
+  <!-- ALERTAS Y MONITOREO (NUEVA) -->
+  <div class="section">
+    <h2>Alertas y Monitoreo</h2>
+    <div class="subtle">Panel de riesgos operacionales y control de cumplimiento (mock). Ideal para gestión diaria.</div>
+
+    <div class="alerts-grid" id="alerts-container">
+      <div class="alert alert-danger">
+        🚨 <strong>3 licitaciones sin gestión</strong> por más de 10 días (sin avance / sin responsable).
+      </div>
+
+      <div class="alert alert-warning">
+        ⏰ <strong>5 licitaciones</strong> con fecha límite dentro de los próximos <strong>7 días</strong>.
+      </div>
+
+      <div class="alert alert-warning">
+        📄 <strong>2 licitaciones</strong> con ítems incompletos o sin extracción semántica finalizada.
+      </div>
+
+      <div class="alert alert-info">
+        🧑‍🤝‍🧑 <strong>1 usuario</strong> con alta carga operativa (más de 20 licitaciones activas).
+      </div>
+
+      <div class="alert alert-info">
+        🧠 <strong>4 licitaciones</strong> marcadas como “baja probabilidad” según histórico (placeholder).
+      </div>
+    </div>
+
+    <h3 style="margin: 10px 0 8px; color:#1e3a8a; font-size:16px;">Alertas sugeridas para sumar al panel</h3>
+    <ul>
+      <li><strong>Sin responsable asignado</strong> (owner vacío).</li>
+      <li><strong>Estancadas en etapa</strong> (ej: “Analizadas” por > X días).</li>
+      <li><strong>Sin finanzas</strong> (no hay presupuesto referencial / moneda / forma de pago).</li>
+      <li><strong>Sin homologación</strong> (ítems sin top-3 candidatos o sin persistencia).</li>
+      <li><strong>Documentos faltantes</strong> (bases, anexos, formularios obligatorios).</li>
+      <li><strong>Fecha límite hoy / mañana</strong> (riesgo crítico).</li>
+      <li><strong>Presupuesto vs adjudicado</strong> con desviación alta (sobre/infra).</li>
+      <li><strong>Baja tasa de adjudicación por usuario</strong> (eficiencia/entrenamiento).</li>
+      <li><strong>Ítems muy cotizados pero poco adjudicados</strong> (problema de oferta/precio/especificación).</li>
+      <li><strong>Errores de extracción</strong> (páginas no leídas, tablas partidas, warnings).</li>
+      <li><strong>Duplicadas</strong> (mismo código licitación cargado más de una vez).</li>
+    </ul>
+  </div>
+
+</div>
+
+<footer>
+  Control Room · Datos simulados
+</footer>
+<script>
+fetch("/api/control-room")
+  .then(res => res.json())
+  .then(data => {
+
+    const licitaciones = data.licitaciones || [];
+
+    const licitacionesSinAsignar = licitaciones.filter(l =>
+      !l.usuario || l.usuario === "Sin asignar"
+    ).length;
+
+    
+    if (licitacionesSinAsignar > 0) {
+      document.getElementById("alerts-container").innerHTML += `
+        <div class="alert alert-danger">
+          🚨 <strong>${licitacionesSinAsignar} licitaciones sin asignar responsable</strong>
+        </div>
+      `;
+    }
+    
+    //const licitaciones = data.licitaciones;
+
+    // =========================
+    // RESUMEN PIPELINE
+    // =========================
+
+    const pipeline = {
+      total: licitaciones.length,
+      sin_asignar: 0,
+      analisis: 0,
+      evaluacion: 0,
+      adjudicadas: 0,
+      no_adjudicadas: 0
+    };
+
+
+    licitaciones.forEach(l => {
+
+      if (!l.usuario || l.usuario === "Sin asignar") {
+        pipeline.sin_asignar++;
+        return;
+      }
+
+      switch (l.estado) {
+        case "Adjudicada":
+          pipeline.adjudicadas++;
+          break;
+
+        case "No Adjudicada":
+          pipeline.no_adjudicadas++;
+          break;
+
+        case "En Evaluación":
+          pipeline.evaluacion++;
+          break;
+
+        case "En Análisis":
+          pipeline.analisis++;
+          break;
+
+        default:
+          pipeline.analisis++;
+      }
+    });
+
+
+    // Pintar valores
+    document.getElementById("pipe-total").textContent = pipeline.total;
+    document.getElementById("pipe-sin-asignar").textContent = pipeline.sin_asignar;
+    document.getElementById("pipe-analisis").textContent = pipeline.analisis;
+    document.getElementById("pipe-evaluacion").textContent = pipeline.evaluacion;
+    document.getElementById("pipe-adjudicadas").textContent = pipeline.adjudicadas;
+    document.getElementById("pipe-no-adjudicadas").textContent =  pipeline.no_adjudicadas;
+
+
+
+
+    /* =========================
+       KPIs
+    ========================== */
+    document.getElementById("kpi-cargadas").textContent =
+      data.kpis.licitaciones_cargadas;
+
+    document.getElementById("kpi-en-proceso").textContent =
+      data.kpis.licitaciones_en_proceso;
+
+    document.getElementById("kpi-adjudicadas").textContent =
+      data.kpis.licitaciones_adjudicadas;
+
+    
+    document.getElementById("kpi-presupuesto").textContent =
+      "$" + data.kpis.presupuesto_total.toLocaleString("es-CL");
+
+    document.getElementById("kpi-adjudicado").textContent =
+      "$" + data.kpis.monto_adjudicado_total.toLocaleString("es-CL");
+
+
+    // =========================
+    // FUNNEL DE EVOLUCIÓN (CORRECTO)
+    // =========================
+
+    const funnel = {
+      cargadas: licitaciones.length,
+      asignadas: 0,
+      analisis: 0,
+      evaluacion: 0,
+      adjudicadas: 0,
+      no_adjudicadas: 0
+    };
+
+    licitaciones.forEach(l => {
+
+      // Asignadas
+      if (l.usuario && l.usuario !== "Sin asignar") {
+        funnel.asignadas++;
+      }
+
+      // En análisis o más
+      if (
+        ["En Análisis", "En Evaluación", "Adjudicada", "No Adjudicada"]
+          .includes(l.estado)
+      ) {
+        funnel.analisis++;
+      }
+
+      // En evaluación o más
+      if (
+        ["En Evaluación", "Adjudicada", "No Adjudicada"]
+          .includes(l.estado)
+      ) {
+        funnel.evaluacion++;
+      }
+
+      // Terminales
+      if (l.estado === "Adjudicada") {
+        funnel.adjudicadas++;
+      }
+
+      if (l.estado === "No Adjudicada") {
+        funnel.no_adjudicadas++;
+      }
+    });
+
+
+
+    /* =========================
+       ESTADOS
+    ========================== */
+    const estados = {};
+    licitaciones.forEach(l => {
+      estados[l.estado] = (estados[l.estado] || 0) + 1;
+    });
+
+    new Chart(chartEstados, {
+      type: "doughnut",
+      data: {
+        labels: Object.keys(estados),
+        datasets: [{
+          data: Object.values(estados)
+        }]
+      }
+    });
+
+    /* =========================
+       FINANZAS
+    ========================== */
+    const adjudicadas = licitaciones.filter(l => l.estado === "Adjudicada");
+
+    new Chart(chartFinanzas, {
+      type: "bar",
+      data: {
+        labels: adjudicadas.map(l => l.codigo_licitacion),
+        datasets: [{
+          label: "Monto adjudicado",
+          data: adjudicadas.map(l => l.monto_adjudicado || 0)
+        }]
+      },
+      options: {
+        plugins: { legend: { display: false } }
+      }
+    });
+
+    /* =========================
+      RENDIMIENTO POR USUARIO
+    ========================== */
+    const tbodyRendimiento = document.querySelector(
+      "#tabla-rendimiento-usuario tbody"
+    );
+
+    tbodyRendimiento.innerHTML = "";
+
+    Object.entries(data.por_usuario).forEach(([usuario, info]) => {
+      const totalItems = info.total_items || 0;
+      const itemsAdj = info.items_adjudicados || 0;
+
+      const pctItems = totalItems > 0
+        ? info.porcentaje_items.toFixed(1) + "%"
+        : "0%";
+
+      const pctLicit = info.cargadas > 0
+        ? info.porcentaje_licitaciones.toFixed(1) + "%"
+        : "0%";
+
+      const tr = document.createElement("tr");
+      tr.innerHTML = `
+        <td>${usuario}</td>
+        <td>${info.cargadas}</td>
+        <td>${info.adjudicadas}</td>
+        <td>$${(info.monto_adjudicado || 0).toLocaleString("es-CL")}</td>
+        <td>${totalItems}</td>
+        <td>${itemsAdj}</td>
+        <td>${pctItems}</td>
+        <td>${pctLicit}</td>
+      `;
+
+      tbodyRendimiento.appendChild(tr);
+    });
+
+    /*=========================
+      NUEVO GRÁFICO: PARTICIPACIÓN VS ADJUDICACIÓN
+    ========================== */
+
+    // Gráfico adicional de rendimiento detallado por usuario
+    const usuarios = Object.keys(data.por_usuario);
+    const totalPorUsuario = usuarios.map(u => data.por_usuario[u].cargadas);
+    const adjudicadasPorUsuario = usuarios.map(u => data.por_usuario[u].adjudicadas);
+    const montosAdjudicados = usuarios.map(u => data.por_usuario[u].monto_adjudicado || 0);
+
+    const container = document.getElementById("grafico-rendimiento-detalle");
+
+    const title = document.createElement("h2");
+    title.textContent = "Gráfico detallado por Usuario";
+    container.appendChild(title);
+
+    const subtitle = document.createElement("div");
+    subtitle.className = "subtle";
+    subtitle.textContent = "Comparativa de participación vs adjudicación. Tooltip muestra monto adjudicado.";
+    container.appendChild(subtitle);
+
+    const canvas = document.createElement("canvas");
+    canvas.id = "chartUsuariosDetalle";
+    canvas.className = "chart-full";
+    container.appendChild(canvas);
+
+    new Chart(canvas, {
+      type: "bar",
+      data: {
+        labels: usuarios,
+        datasets: [
+          {
+            label: "Total licitaciones",
+            data: totalPorUsuario,
+            backgroundColor: "#3b82f6"
+          },
+          {
+            label: "Licitaciones adjudicadas",
+            data: adjudicadasPorUsuario,
+            backgroundColor: "#10b981"
+          }
+        ]
+      },
+      options: {
+        responsive: true,
+        plugins: {
+          tooltip: {
+            callbacks: {
+              label: function(context) {
+                const idx = context.dataIndex;
+                const datasetIndex = context.datasetIndex;
+                const user = usuarios[idx];
+                if (datasetIndex === 1) {
+                  const monto = montosAdjudicados[idx];
+                  return `Adjudicadas: ${context.raw} – Monto: $${monto.toLocaleString("es-CL")}`;
+                }
+                return `${context.dataset.label}: ${context.raw}`;
+              }
+            }
+          }
+        },
+        scales: {
+          x: {
+            stacked: false
+          },
+          y: {
+            beginAtZero: true,
+            title: {
+              display: true,
+              text: "Cantidad de licitaciones"
+            }
+          }
+        }
+      }
+    });
+
+
+    /* =========================
+      SEGUIMIENTO POR USUARIO
+      (ENFOQUE OPERATIVO)
+    ========================= */
+
+    const tbodySeguimiento = document.querySelector("#tabla-seguimiento-usuario tbody");
+    tbodySeguimiento.innerHTML = "";
+
+    const usuariosSeguimiento = Object.keys(data.por_usuario);
+
+    const seguimientoData = [];
+
+    usuariosSeguimiento.forEach(usuario => {
+      const info = data.por_usuario[usuario];
+
+      const total = info.cargadas || 0;
+      const adjudicadas = info.adjudicadas || 0;
+
+      const noAdjudicadas = licitaciones.filter(l =>
+        l.usuario === usuario && l.estado === "No Adjudicada"
+      ).length;
+
+      const enProceso = total - adjudicadas - noAdjudicadas;
+
+      const pctAdjudicacion = total > 0
+        ? ((adjudicadas / total) * 100).toFixed(1)
+        : "0.0";
+
+      // Tabla
+      const tr = document.createElement("tr");
+      tr.innerHTML = `
+        <td>${usuario}</td>
+        <td>${total}</td>
+        <td>${enProceso}</td>
+        <td>${adjudicadas}</td>
+        <td>${noAdjudicadas}</td>
+        <td>${pctAdjudicacion}%</td>
+      `;
+      tbodySeguimiento.appendChild(tr);
+
+      // Data para gráfico
+      seguimientoData.push({
+        usuario,
+        enProceso,
+        adjudicadas,
+        noAdjudicadas
+      });
+    });
+
+    /* =========================
+      GRÁFICO SEGUIMIENTO
+    ========================= */
+
+    const ctxSeguimiento = document.getElementById("chartSeguimientoUsuario");
+
+    new Chart(ctxSeguimiento, {
+      type: "bar",
+      data: {
+        labels: seguimientoData.map(s => s.usuario),
+        datasets: [
+          {
+            label: "En proceso",
+            data: seguimientoData.map(s => s.enProceso),
+            backgroundColor: "#fbbf24"
+          },
+          {
+            label: "Adjudicadas",
+            data: seguimientoData.map(s => s.adjudicadas),
+            backgroundColor: "#10b981"
+          },
+          {
+            label: "No adjudicadas",
+            data: seguimientoData.map(s => s.noAdjudicadas),
+            backgroundColor: "#ef4444"
+          }
+        ]
+      },
+      options: {
+        responsive: true,
+        plugins: {
+          tooltip: {
+            callbacks: {
+              label: function(ctx) {
+                return `${ctx.dataset.label}: ${ctx.raw}`;
+              }
+            }
+          },
+          legend: {
+            position: "top"
+          }
+        },
+        scales: {
+          x: {
+            stacked: true
+          },
+          y: {
+            stacked: true,
+            beginAtZero: true,
+            title: {
+              display: true,
+              text: "Cantidad de licitaciones"
+            }
+          }
+        }
+      }
+    });
+
+
+
+
+    // =========================
+    // USO DEL SISTEMA (por mes)
+    // =========================
+
+    const usoPorMes = {};
+
+    // Construimos clave YYYY-MM para ordenar bien
+    licitaciones.forEach((l, idx) => {
+      const fecha = l.fecha_carga
+        ? new Date(l.fecha_carga)
+        : new Date(new Date().setMonth(new Date().getMonth() - (idx % 6)));
+
+      const key = `${fecha.getFullYear()}-${String(fecha.getMonth() + 1).padStart(2, "0")}`;
+      usoPorMes[key] = (usoPorMes[key] || 0) + 1;
+    });
+
+    // Orden cronológico REAL
+    const orderedKeys = Object.keys(usoPorMes).sort();
+
+    // Labels bonitos en español
+    const labelsUso = orderedKeys.map(key => {
+      const [y, m] = key.split("-");
+      const fecha = new Date(y, m - 1, 1);
+      return fecha.toLocaleString("es-CL", { month: "short", year: "numeric" });
+    });
+
+    const dataUso = orderedKeys.map(k => usoPorMes[k]);
+
+    new Chart(chartUsoMensual, {
+          type: "line",
+          data: {
+            labels: labelsUso,
+            datasets: [{
+              label: "Licitaciones cargadas",
+              data: dataUso,
+              tension: 0.3
+            }]
+          }
+        });
+
+    new Chart(chartFunnel, {
+      type: "bar",
+      data: {
+        labels: [
+          "Cargadas",
+          "Asignadas",
+          "En análisis",
+          "En evaluación",
+          "Adjudicadas",
+          "No adjudicadas"
+        ],
+        datasets: [{
+          data: [
+            funnel.cargadas,
+            funnel.asignadas,
+            funnel.analisis,
+            funnel.evaluacion,
+            funnel.adjudicadas,
+            funnel.no_adjudicadas
+          ]
+        }]
+      },
+      options: {
+        indexAxis: "y",
+        plugins: {
+          legend: { display: false }
+        },
+        scales: {
+          x: { beginAtZero: true }
+        }
+      }
+    });
+
+
+
+  })
+  .catch(err => {
+    console.error("❌ Error cargando Control Room mock:", err);
+  });
+
+  
+</script>
+
+<script>
+  fetch("/api/control-room")
+    .then(res => res.json())
+    .then(data => {
+      const cotizados = data.items_mas_cotizados || [];
+      const tablaCot = document.querySelector("#tabla-mas-cotizados tbody");
+      tablaCot.innerHTML = "";
+      cotizados.forEach(([nombre, veces]) => {
+        const tr = document.createElement("tr");
+        tr.innerHTML = `<td>${nombre}</td><td>${veces}</td>`;
+        tablaCot.appendChild(tr);
+      });
+      new Chart(document.getElementById("chartMasCotizados"), {
+        type: "bar",
+        data: {
+          labels: cotizados.map(([n]) => n),
+          datasets: [{
+            label: "Veces cotizado",
+            data: cotizados.map(([_, v]) => v),
+            backgroundColor: "#6366f1"
+          }]
+        },
+        options: {
+          indexAxis: "y",
+          plugins: { legend: { display: false } },
+          scales: { x: { beginAtZero: true } }
+        }
+      });
+
+
+      const adjudicados = data.items_mas_adjudicados || [];
+      const tablaAdj = document.querySelector("#tabla-mas-adjudicados tbody");
+      tablaAdj.innerHTML = "";
+      adjudicados.forEach(([nombre, veces]) => {
+        const tr = document.createElement("tr");
+        tr.innerHTML = `<td>${nombre}</td><td>${veces}</td>`;
+        tablaAdj.appendChild(tr);
+      });
+      new Chart(document.getElementById("chartMasAdjudicados"), {
+        type: "bar",
+        data: {
+          labels: adjudicados.map(([n]) => n),
+          datasets: [{
+            label: "Veces adjudicado",
+            data: adjudicados.map(([_, v]) => v),
+            backgroundColor: "#10b981"
+          }]
+        },
+        options: {
+          indexAxis: "y",
+          plugins: { legend: { display: false } },
+          scales: { x: { beginAtZero: true } }
+        }
+      });
+    });
+</script>
+
+<script>
+fetch("/api/control-room")
+  .then(res => res.json())
+  .then(data => {
+    // =========================
+    // ALERTAS DINÁMICAS
+    // =========================
+    const alertContainer = document.getElementById("alerts-container");
+    alertContainer.innerHTML = ""; // Limpia alertas estáticas
+
+    const iconoPorTipo = {
+      danger: "🚨",
+      warning: "⚠️",
+      info: "ℹ️"
+    };
+
+    const alertas = data.alertas || [];
+
+    alertas.forEach(alerta => {
+      const div = document.createElement("div");
+      div.className = `alert alert-${alerta.tipo}`;
+
+      let mensaje = `${iconoPorTipo[alerta.tipo] || "🔔"} <strong>${alerta.mensaje}</strong>`;
+
+      // Agregar enlaces si alerta tiene campo 'ids_afectados'
+      if (alerta.ids_afectados && Array.isArray(alerta.ids_afectados)) {
+        const enlaces = alerta.ids_afectados
+          .map(id => `<a href='/detalle_licitacion/${id}' target='_blank'>${id}</a>`) 
+          .join(", ");
+
+        mensaje += `<br><span style='font-size:13px; color:#374151'>Licitaciones afectadas: ${enlaces}</span>`;
+      }
+
+      div.innerHTML = mensaje;
+      alertContainer.appendChild(div);
+    });
+
+    if (alertas.length === 0) {
+      alertContainer.innerHTML = `
+        <div class="alert alert-info">
+          ✅ <strong>Sin alertas críticas al momento.</strong>
+        </div>
+      `;
+    }
+  })
+  .catch(err => {
+    console.error("❌ Error cargando Control Room mock:", err);
+  });
+</script>
+
+
+
+</body>
+</html>

@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Licitaciones</title>
   <link rel="stylesheet" href="/static/css/style.css"/>
+
   <style>
     /* Estilos específicos del listado */
     .filters-bar {
@@ -47,11 +48,98 @@
       background: #084298;
     }
   </style>
+
+  <!-- ================= ESTADOS PROVISIONALES ================= -->
+  <script>
+    // =====================================================
+    // ESTADOS PROVISIONALES POR UUID (DEFAULT = ACTIVA)
+    // =====================================================
+    const ESTADOS_POR_UUID = {
+      en_proceso: [
+        '98d68431-c086-4626-8ea6-236e2bc26ed9'
+      ],
+      adjudicada: [
+        '23a008ff-3bb5-43ae-8f94-01601835b89c',
+        'b845d837-54c1-4b41-aed9-d669978834a4'
+      ],
+      no_adjudicada: [
+        '736e67da-dc9e-430f-a969-5b487e331ed6',
+        'a103cf85-8c84-4913-8c17-9db0dd8c6381'
+      ]
+    };
+
+    function obtenerEstadoPorUUID(uuid) {
+      for (const estado in ESTADOS_POR_UUID) {
+        if (ESTADOS_POR_UUID[estado].includes(uuid)) {
+          return estado;
+        }
+      }
+      return 'activa';
+    }
+
+    function labelEstado(estado) {
+      switch (estado) {
+        case 'activa': return 'Activa';
+        case 'en_proceso': return 'En proceso';
+        case 'adjudicada': return 'Adjudicada';
+        case 'no_adjudicada': return 'No adjudicada';
+        default: return 'Activa';
+      }
+    }
+  </script>
+
+  <!-- ================= USUARIOS PROVISIONALES ================= -->
+  <script>
+    // =====================================================
+    // USUARIOS POR UUID (DEFAULT = Usuario 1)
+    // =====================================================
+    const USUARIOS_POR_UUID = {
+      'Usuario 2': [
+        // agrega aquí UUIDs de Usuario 2
+      ],
+      'Usuario 3': [
+        // agrega aquí UUIDs de Usuario 3
+      ]
+    };
+
+    function obtenerUsuarioPorUUID(uuid) {
+      for (const usuario in USUARIOS_POR_UUID) {
+        if (USUARIOS_POR_UUID[usuario].includes(uuid)) {
+          return usuario;
+        }
+      }
+      return 'Usuario 1';
+    }
+  </script>
+
+  <script>
+    function formatFechaChile(fechaRaw) {
+      if (!fechaRaw) return '-';
+
+      const date = new Date(fechaRaw);
+      if (isNaN(date)) return fechaRaw;
+
+      const options = {
+        timeZone: 'America/Santiago',
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+        hour12: false
+      };
+
+      return new Intl.DateTimeFormat('es-CL', options)
+        .format(date)
+        .replace(/\//g, '-')
+        .replace(', ', ' ');
+    }
+  </script>
 </head>
 
 <body class="page-body">
 
-  <!-- Navegación secundaria -->
   <nav class="sub-nav">
     <a href="/" class="nav-link">← Home</a>
   </nav>
@@ -61,6 +149,7 @@
 
     <!-- ================= FILTROS ================= -->
     <div class="filters-bar">
+
       <div class="filter-group">
         <label>Buscar por nombre</label>
         <input type="text" id="filter-nombre" placeholder="Nombre de licitación">
@@ -69,6 +158,16 @@
       <div class="filter-group">
         <label>Buscar por código</label>
         <input type="text" id="filter-json" placeholder="Código de licitación">
+      </div>
+
+      <div class="filter-group">
+        <label>Filtrar por usuario</label>
+        <select id="filter-usuario">
+          <option value="">Todos</option>
+          <option value="Usuario 1">Usuario 1</option>
+          <option value="Usuario 2">Usuario 2</option>
+          <option value="Usuario 3">Usuario 3</option>
+        </select>
       </div>
 
       <div class="filter-group">
@@ -89,25 +188,29 @@
     <!-- ================= TABLA ================= -->
     <div class="table-wrapper">
       <table id="licitaciones-table" class="styled-table">
-        <thead>
-          <tr>
-            <th>Nombre</th>
-            <th>Código</th>
-            <th>Estado</th>
-            <th>Fecha</th>
-            <th>Acción</th>
-          </tr>
-        </thead>
+          <thead>
+            <tr>
+              <th>Código</th>
+              <th>Nombre</th>
+              <th>Estado</th>
+              <th>Monto licitado</th>
+              <th>Monto adjudicado</th>
+              <th>Total ítems</th>
+              <th>Ítems adjudicados</th>
+              <th>Usuario</th>
+              <th>Fecha de Publicación</th>
+              <th>Alerta</th>
+              <th>Acción</th>
+            </tr>
+          </thead>
         <tbody></tbody>
       </table>
     </div>
 
-    <!-- ================= PAGINADO ================= -->
     <div class="pagination-bar">
       <div id="pagination-info"></div>
       <div class="pagination-controls" id="pagination-controls"></div>
     </div>
-
   </section>
 
   <script>
@@ -120,17 +223,30 @@
     const paginationInfo = document.getElementById('pagination-info');
     const paginationControls = document.getElementById('pagination-controls');
 
+    // =====================================================
+    // FILTRO TEMPORAL POR UUID (LISTA NEGRA)
+    // =====================================================
+    const UUIDS_OCULTOS = [
+      '736e67da-dc9e-430f-a969-5b487e331ed6',
+      '4b00d0a2-9eb0-4cce-a87e-468923606bdc'
+    ];
+
     function applyFilters() {
       const nombre = document.getElementById('filter-nombre').value.toLowerCase();
       const codigo = document.getElementById('filter-json').value.toLowerCase();
+      const usuarioFiltro = document.getElementById('filter-usuario').value;
 
       filteredDocs = allDocs.filter(d => {
+        if (UUIDS_OCULTOS.includes(d.id)) return false;
+
         const nombreLic = (d.nombre || '').toLowerCase();
         const codigoLic = (d.codigo_licitacion || '').toLowerCase();
+        const usuario = obtenerUsuarioPorUUID(d.id);
 
         return (
           nombreLic.includes(nombre) &&
-          codigoLic.includes(codigo)
+          codigoLic.includes(codigo) &&
+          (usuarioFiltro === '' || usuario === usuarioFiltro)
         );
       });
 
@@ -141,31 +257,66 @@
     function renderTable() {
       tbody.innerHTML = '';
 
-      let docsToShow = filteredDocs;
-      let total = filteredDocs.length;
 
-      if (pageSize !== 'all') {
-        const start = (currentPage - 1) * pageSize;
-        const end = start + pageSize;
-        docsToShow = filteredDocs.slice(start, end);
+        let docsToShow = filteredDocs;
+        let total = filteredDocs.length;
+
+
+        if (pageSize !== 'all') {
+          const start = (currentPage - 1) * pageSize;
+          const end = start + pageSize;
+          docsToShow = filteredDocs.slice(start, end);
+        }
+
+
+        docsToShow.forEach(d => {
+          const tr = document.createElement('tr');
+          const alertaIcon = d.tiene_alerta
+            ? `<span title="${(d.alertas_tooltip || []).join(' | ')}">🔔</span>`
+            : '';
+
+
+          const cod = d.codigo_licitacion || d.id || '—';
+          const nombre = d.nombre || d.nombre_original || d.filename || '—';
+          const usuario = d.usuario || obtenerUsuarioPorUUID(d.id) || 'Sin asignar';
+          const estado = d.estado || obtenerEstadoPorUUID(d.id) || '—';
+
+
+          const fechaPublicacion = formatFechaCorta(d.fecha_publicacion);
+
+
+          tr.innerHTML = `
+            <td>${cod}</td>
+            <td>${nombre}</td>
+            <td>${estado}</td>
+            <td>$${(d.presupuesto_maximo || d.presupuesto_referencial || 0).toLocaleString('es-CL')}</td>
+            <td>$${(d.monto_adjudicado || 0).toLocaleString('es-CL')}</td>
+            <td>${d.cantidad_items_total || 0}</td>
+            <td>${d.cantidad_items_adjudicados || 0}</td>
+            <td>${usuario}</td>
+            <td>${fechaPublicacion}</td>
+            <td style="text-align:center">${alertaIcon}</td>
+            <td>
+            <a href="/detalle_licitacion/${d.id}" class="btn">Ver detalle</a>
+            </td>
+            `;
+          tbody.appendChild(tr);
+        });
+
+
+        renderPagination(total);
       }
 
-      docsToShow.forEach(d => {
-        const tr = document.createElement('tr');
-        tr.innerHTML = `
-          <td style="min-width:260px">${d.nombre || d.nombre_original || d.nombreOriginal || d.filename || '—'}</td>
-          <td style="min-width:220px">${d.codigo_licitacion || d.filename || '—'}</td>
-          <td>${d.estado || d.pages_count || d.pagesCount || '-'}</td>
-          <td>${d.fecha_carga || d.timestamp || '-'}</td>
-          <td>
-            <a href="/detalle_licitacion/${d.id}" class="btn">Ver detalle</a>
-          </td>
-        `;
-        tbody.appendChild(tr);
-      });
 
-      renderPagination(total);
+    function formatFechaCorta(fechaRaw) {
+      if (!fechaRaw) return '—';
+      const date = new Date(fechaRaw);
+      if (isNaN(date)) return '—';
+      return date.toLocaleDateString('es-CL', { day: '2-digit', month: '2-digit', year: 'numeric' });
     }
+
+
+
 
     function renderPagination(total) {
       paginationControls.innerHTML = '';
@@ -193,6 +344,7 @@
 
     document.getElementById('filter-nombre').addEventListener('input', applyFilters);
     document.getElementById('filter-json').addEventListener('input', applyFilters);
+    document.getElementById('filter-usuario').addEventListener('change', applyFilters);
 
     document.getElementById('page-size').addEventListener('change', e => {
       pageSize = e.target.value === 'all' ? 'all' : parseInt(e.target.value);
@@ -203,21 +355,54 @@
     document.getElementById('clear-filters').addEventListener('click', () => {
       document.getElementById('filter-nombre').value = '';
       document.getElementById('filter-json').value = '';
+      document.getElementById('filter-usuario').value = '';
       document.getElementById('page-size').value = '10';
       pageSize = 10;
       currentPage = 1;
       applyFilters();
     });
 
-    // Carga inicial desde PostgreSQL
-    fetch('/api/licitaciones')
-      .then(res => res.json())
-      .then(docs => {
-        allDocs = docs;
-        filteredDocs = docs;
-        renderTable();
-      })
-      .catch(err => console.error('Error cargando licitaciones', err));
+  fetch('/api/licitaciones')
+    .then(res => res.json())
+    .then(docs => {
+
+      // 🔍 DEBUG GLOBAL: ver todo lo que llega desde la API
+      console.log("📦 Docs recibidos desde /api/licitaciones:", docs);
+
+      fetch('/api/control-room')
+        .then(res => res.json())
+        .then(control => {
+
+          const alertMap = {};
+          (control.alertas || []).forEach(a => {
+            (a.ids_afectados || []).forEach(id => {
+              if (!alertMap[id]) alertMap[id] = [];
+              alertMap[id].push(a.mensaje);
+            });
+          });
+
+          docs.forEach(doc => {
+            doc.tiene_alerta = !!alertMap[doc.id];
+            doc.alertas_tooltip = alertMap[doc.id] || [];
+
+            // 🧪 DEBUG CLAVE: ver la fecha exacta por licitación
+            console.log(
+              "🧪 Licitación:",
+              doc.id,
+              "| fecha_publicacion:",
+              doc.fecha_publicacion,
+              "| fecha_carga:",
+              doc.fecha_carga
+            );
+          });
+
+          allDocs = docs;
+          filteredDocs = docs;
+          applyFilters();
+        });
+    })
+    .catch(err => console.error('Error cargando licitaciones', err));
+
   </script>
 
 </body>
