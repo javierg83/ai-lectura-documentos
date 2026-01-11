@@ -1,14 +1,9 @@
-from openai import OpenAI
+from services.ai_engine.factory import AIProviderFactory
+from services.ai_engine.prompt_loader import PromptLoader
 import config
 import json
 from datetime import datetime
 import os
-
-# ==========================================================
-# OPENAI CLIENT
-# ==========================================================
-oai = OpenAI(api_key=config.API_KEY)
-
 
 def _guardar_llm_raw_json(raw_text: str, tag: str = "llm_response"):
     ts = datetime.utcnow().strftime("%Y%m%d_%H%M%S")
@@ -26,91 +21,104 @@ def _guardar_llm_raw_json(raw_text: str, tag: str = "llm_response"):
     print(f"[🧪 DEBUG] Respuesta LLM cruda guardada en: {filename}")
 
 
-def run_llm_raw(prompt: str) -> str:
+def run_llm_raw(prompt_path_or_text: str, overrides: dict = None) -> str:
     """
-    Ejecuta una llamada directa al LLM y devuelve solo el texto plano.
+    Ejecuta una llamada al LLM. 
+    Argumento 'prompt_path_or_text': 
+      - Puede ser una ruta a un archivo .txt con YAML frontmatter.
+      - O un string directo (en cuyo caso usa defaults).
     """
-    print("[llm_service] 🧠 Iniciando llamada LLM (modo batch)")
-    print(f"[llm_service] 📏 Largo del prompt: {len(prompt)} caracteres")
+    
+    # 1. Configuración por defecto
+    config_dict = {
+        "engine": config.DEFAULT_AI_PROVIDER,
+        "model": "gpt-4o" if config.DEFAULT_AI_PROVIDER == "openai" else "gemini-1.5-pro",
+        "temperature": 0.0
+    }
+    
+    prompt_text = prompt_path_or_text
+    
+    # 2. Intentar cargar desde archivo si parece una ruta y existe
+    if os.path.exists(prompt_path_or_text) and prompt_path_or_text.endswith(".txt"):
+        print(f"[llm_service] 📂 Cargando prompt desde archivo: {prompt_path_or_text}")
+        loaded_config, loaded_text = PromptLoader.load_prompt(prompt_path_or_text)
+        config_dict.update(loaded_config)
+        prompt_text = loaded_text
+    else:
+        # Es texto directo, asumimos config default o overrides
+        pass
 
-    messages = [
-        {
-            "role": "system",
-            "content": (
-                "Eres un asistente experto en análisis de documentos públicos, "
-                "legales y técnicos. Tu tarea es extraer información estructurada "
-                "de forma precisa, sin inventar datos."
-            )
-        },
-        {
-            "role": "user",
-            "content": prompt
-        }
-    ]
+    # 3. Aplicar overrides manuales si existen
+    if overrides:
+        config_dict.update(overrides)
 
-    print("[llm_service] 🚀 Enviando solicitud al modelo GPT...")
-    resp = oai.chat.completions.create(
-        model="gpt-4o",
-        messages=messages,
-        temperature=0
+    print(f"[llm_service] 🧠 Usando Motor: {config_dict.get('engine')} | Modelo: {config_dict.get('model')}")
+
+    # 4. Obtener Provider
+    provider = AIProviderFactory.get_provider(config_dict)
+    
+    # 5. Ejecutar
+    system_prompt = (
+        "Eres un asistente experto en análisis de documentos públicos, "
+        "legales y técnicos. Tu tarea es extraer información estructurada "
+        "de forma precisa, sin inventar datos."
+    )
+    
+    reply, usage = provider.generate_text(
+        prompt=prompt_text,
+        system_prompt=system_prompt,
+        config=config_dict
     )
 
-    reply = resp.choices[0].message.content
-    token_in = resp.usage.prompt_tokens
-    token_out = resp.usage.completion_tokens
-
-    print("[llm_service] ✅ Respuesta LLM recibida correctamente")
-    print(f"[llm_service] 📊 Tokens usados → input: {token_in}, output: {token_out}")
-    print("[llm_service] 📝 Respuesta del modelo (primeros 500 chars):")
-    print(reply[:500] + ("..." if len(reply) > 500 else ""))
-
-    _guardar_llm_raw_json(reply, tag="items_licitacion")
+    print(f"[llm_service] ✅ Respuesta recibida. Tokens: {usage}")
+    _guardar_llm_raw_json(reply, tag="generic_response")
 
     return reply.strip()
 
 
-def run_llm_raw_with_tokens(prompt: str, modelo: str = "gpt-4o") -> dict:
+def run_llm_raw_with_tokens(prompt_path_or_text: str, overrides: dict = None) -> dict:
     """
-    Llama al modelo indicado y retorna respuesta + tokens.
+    Versión que retorna también los tokens.
     """
-    print(f"[llm_service] 🧠 Iniciando llamada LLM con modelo: {modelo}")
-    print(f"[llm_service] 📏 Largo del prompt: {len(prompt)} caracteres")
+    # Reutilizamos lógica (simplificada, duplicada por claridad para no romper compatibilidad firma)
+    
+    config_dict = {
+        "engine": config.DEFAULT_AI_PROVIDER,
+        "model": "gpt-4o" if config.DEFAULT_AI_PROVIDER == "openai" else "gemini-1.5-pro",
+        "temperature": 0.0
+    }
+    
+    prompt_text = prompt_path_or_text
 
-    messages = [
-        {
-            "role": "system",
-            "content": (
-                "Eres un asistente experto en análisis de documentos públicos, "
-                "legales y técnicos. Tu tarea es extraer información estructurada "
-                "de forma precisa, sin inventar datos."
-            )
-        },
-        {
-            "role": "user",
-            "content": prompt
-        }
-    ]
+    if os.path.exists(prompt_path_or_text) and prompt_path_or_text.endswith(".txt"):
+         print(f"[llm_service] 📂 Cargando prompt desde archivo: {prompt_path_or_text}")
+         loaded_config, loaded_text = PromptLoader.load_prompt(prompt_path_or_text)
+         config_dict.update(loaded_config)
+         prompt_text = loaded_text
 
-    print(f"[llm_service] 🚀 Enviando solicitud al modelo {modelo}...")
-    resp = oai.chat.completions.create(
-        model=modelo,
-        messages=messages,
-        temperature=0
+    if overrides:
+        config_dict.update(overrides)
+        
+    print(f"[llm_service] 🧠 Init llamada LLM. Motor: {config_dict.get('engine')} Modelo: {config_dict.get('model')}")
+
+    provider = AIProviderFactory.get_provider(config_dict)
+    
+    system_prompt = (
+        "Eres un asistente experto en análisis de documentos públicos, "
+        "legales y técnicos. Tu tarea es extraer información estructurada "
+        "de forma precisa, sin inventar datos."
     )
 
-    reply = resp.choices[0].message.content
-    token_in = resp.usage.prompt_tokens
-    token_out = resp.usage.completion_tokens
-
-    print("[llm_service] ✅ Respuesta LLM recibida correctamente")
-    print(f"[llm_service] 📊 Tokens usados → input: {token_in}, output: {token_out}")
-    print("[llm_service] 📝 Respuesta del modelo (primeros 500 chars):")
-    print(reply[:500] + ("..." if len(reply) > 500 else ""))
-
-    _guardar_llm_raw_json(reply, tag="items_licitacion")
+    reply, usage = provider.generate_text(
+        prompt=prompt_text,
+        system_prompt=system_prompt,
+        config=config_dict
+    )
+    
+    _guardar_llm_raw_json(reply, tag="generic_response")
 
     return {
         "respuesta": reply.strip(),
-        "tokens_input": token_in,
-        "tokens_output": token_out
+        "tokens_input": usage.get("input", 0),
+        "tokens_output": usage.get("output", 0)
     }

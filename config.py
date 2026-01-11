@@ -5,7 +5,12 @@ load_dotenv()
 import os
 
 # Clave OpenAI
+# AI CONFIG
 API_KEY = os.getenv("OPENAI_API_KEY")
+OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
+GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
+
+DEFAULT_AI_PROVIDER = "openai" # "openai" or "gemini"
 if not API_KEY:
     raise ValueError("La variable OPENAI_API_KEY no está definida en el entorno")
 

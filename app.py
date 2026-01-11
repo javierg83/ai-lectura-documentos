@@ -2,6 +2,9 @@ import os
 from flask import Flask, render_template, jsonify
 import config
 
+from utils.logger import setup_full_console_logging
+setup_full_console_logging()
+
 print("[app] 🚀 Iniciando aplicación Flask")
 
 app = Flask(__name__, static_folder='static', template_folder='templates')
@@ -81,30 +84,41 @@ def api_licitaciones():
     # =========================
     # Caso especial: Real (ID)
     # =========================
-    if True:  # No usar USE_MOCK aquí, porque es un mix
-        real_id = "2b54095a-5a9c-4510-ade8-4f426487c887"
-        
-        real = obtener_licitacion_por_id(real_id)
-        finanzas = obtener_finanzas_por_licitacion(real_id)
-        items = obtener_items_por_licitacion(real_id)
-        homologados = obtener_items_homologados_con_candidatos(real_id)
+    real_ids = [
+        "2b54095a-5a9c-4510-ade8-4f426487c887",
+        "080510e7-8bdb-45b8-8c92-e1cae71f704b",
+        "2c323852-1f2b-4dbf-8296-4a2cfcd92ae9"
+    ]
 
-        if real:
-            licitaciones.append({
-                "id": real.get("id"),
-                "codigo_licitacion": real.get("codigo_licitacion") or real.get("id"),
-                "nombre": real.get("titulo") or "ADQUISICION DE ESTANQUE MAS BOMBA CENTRIFUGA Y KIT DE INSTALACION",
-                "estado": real.get("estado") or "En proceso",
-                "usuario": real.get("usuario") or "Javier Gallardo",
-                "moneda": finanzas.get("moneda") if finanzas else "CLP",
-                "presupuesto_maximo": finanzas.get("presupuesto_referencial") if finanzas else 0,
-                "monto_adjudicado": 0,
-                "cantidad_items_total": len(items),
-                "cantidad_items_adjudicados": len(homologados),
-                "fecha_publicacion": real.get("fecha_publicacion") or "2025-01-04",
-                "fecha_limite": real.get("fecha_cierre") or "2026-01-31",
-                "origen": "real"
-            })
+    if True:  # No usar USE_MOCK aquí, porque es un mix
+        print(f"[app] 📋 Procesando {len(real_ids)} licitaciones reales...")
+        
+        for real_id in real_ids:
+            try:
+                real = obtener_licitacion_por_id(real_id)
+                # Solo si existe la licitación en BD (o Redis) intentamos buscar lo demás
+                if real:
+                    finanzas = obtener_finanzas_por_licitacion(real_id)
+                    items = obtener_items_por_licitacion(real_id)
+                    homologados = obtener_items_homologados_con_candidatos(real_id) or []
+
+                    licitaciones.append({
+                        "id": real.get("id"),
+                        "codigo_licitacion": real.get("codigo_licitacion") or real.get("id"),
+                        "nombre": real.get("titulo") or f"Licitación {real_id[:8]}...",
+                        "estado": real.get("estado") or "En proceso",
+                        "usuario": real.get("usuario") or "Javier Gallardo",
+                        "moneda": finanzas.get("moneda") if finanzas else "CLP",
+                        "presupuesto_maximo": finanzas.get("presupuesto_referencial") if finanzas else 0,
+                        "monto_adjudicado": 0,
+                        "cantidad_items_total": len(items) if items else 0,
+                        "cantidad_items_adjudicados": len(homologados) if homologados else 0,
+                        "fecha_publicacion": real.get("fecha_publicacion") or "2025-01-04",
+                        "fecha_limite": real.get("fecha_cierre") or "2026-01-31",
+                        "origen": "real"
+                    })
+            except Exception as e:
+                print(f"[app] ⚠️ Error procesando ID real {real_id}: {e}")
 
     # =========================
     # Mock normales

@@ -1,7 +1,7 @@
 # main.py
 from pathlib import Path
 import os
-from processor import process_pages
+from services.processor import process_pages
 from orquestador_documental import classify_document
 from ai_esp_licitaciones import handle_licitaciones
 from ai_esp_hipotecarios import handle_hipotecarios

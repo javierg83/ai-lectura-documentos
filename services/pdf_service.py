@@ -4,7 +4,7 @@ import json
 import uuid
 from datetime import datetime
 from utils.pdf_utils import extraer_paginas_pdf
-from processor import process_pages
+from .processor import process_pages
 from utils.file_utils import guardar_resultados, normalizar_nombre
 from embeddings import generar_embedding
 from services.embedding_service import run_embedding_batch
@@ -28,16 +28,23 @@ def process_pdf(file_path, tipo_extraccion="ia", paginas=None, read_all=True, ca
     print("[pdf_service] → Parámetros: read_all =", read_all, ", páginas específicas =", paginas)
     print("[pdf_service] → Tipo de extracción seleccionado:", tipo_extraccion)
 
-    resultados = process_pages(destino, carpeta, paginas, read_all, nombre_sin_extension)
+    resultados = process_pages(destino, carpeta, paginas, read_all, nombre_sin_extension) # process_pages ya normaliza internamente para SU uso, pero aquí necesitamos usar el ID normalizado para lo siguiente
+
+    # Normalizar para el resto del servicio
+    doc_id_normalized = normalizar_nombre(nombre_sin_extension)
+    print(f"[pdf_service] → Usando ID normalizado: {doc_id_normalized}")
 
     try:
-        print(f"[guardar_archivos] → Guardando JSON en {nombre_sin_extension}_resultado_paginas.json")
-        guardar_resultados(resultados, carpeta, nombre_base=nombre_sin_extension)
+        print(f"[guardar_archivos] → Guardando JSON en {doc_id_normalized}_resultado_paginas.json")
+        # Recargamos resultados desde processor si fuera necesario, pero aquí 'resultados'
+        # es el return de process_pages. Ojo: process_pages guarda en Redis usando el ID normalizado.
+        
+        guardar_resultados(resultados, carpeta, nombre_base=doc_id_normalized)
 
-        # Guardar también un JSON por cada página (requerido por run_embedding_batch)
+        # Guardar JSON por página
         for pagina in resultados:
             num_pagina = pagina.get("pagina", "desconocida")
-            archivo_pagina = os.path.join(carpeta, f"{nombre_sin_extension}_pag_{num_pagina}.json")
+            archivo_pagina = os.path.join(carpeta, f"{doc_id_normalized}_pag_{num_pagina}.json")
             with open(archivo_pagina, "w", encoding="utf-8") as f:
                 json.dump(pagina, f, ensure_ascii=False, indent=2)
             print(f"[📄] Archivo de página guardado: {archivo_pagina}")
@@ -45,73 +52,45 @@ def process_pdf(file_path, tipo_extraccion="ia", paginas=None, read_all=True, ca
     except Exception as e:
         print(f"[❌ ERROR] Error durante guardado de resultados: {e}")
 
-    print(f"[embedding] 🧠 Iniciando embedding para {len(resultados)} páginas")
+    print(f"[embedding] 🧠 Iniciando cálculo de embedding global para {len(resultados)} páginas")
 
+    # NOTA: process_pages YA guarda los embeddings de elementos y páginas en Redis.
+    # Aquí solo agregamos el texto para el embedding DEL DOCUMENTO COMPLETO.
+    
     texto_documento = ""
     for pagina in resultados:
-        num_pagina = pagina["pagina"]
-        print(f"[embedding] → Procesando página {num_pagina}")
-        contenido_pagina = ""
-        key_base = f"doc_raw_page:{nombre_sin_extension}:p{num_pagina}"
-
+        # Concatenamos texto de todos los elementos para el doc completo
         elementos = pagina.get("elementos", [])
-        print(f"[embedding]   • Elementos detectados: {len(elementos)}")
+        for elem in elementos:
+            # Asegurar que es string
+            contenido_raw = elem.get("contenido", "")
+            if isinstance(contenido_raw, list):
+                 # Si es tabla (lista de listas), lo aplanamos un poco para texto
+                 texto = " ".join([str(item) for sublist in contenido_raw for item in (sublist if isinstance(sublist, list) else [sublist])])
+            else:
+                 texto = str(contenido_raw)
 
-        if not elementos:
-            print(f"⚠️ Página {num_pagina} no contiene elementos, se omite")
-            continue
+            if texto and texto.strip():
+                texto_documento += texto.strip() + "\n"
 
-        for idx, elem in enumerate(elementos):
-            texto = str(elem.get("contenido", "")).strip()
-            print(f"[embedding]     • Elem {idx+1}: '{texto[:50]}'... (len={len(texto)})")
-
-            if not texto:
-                continue
-
-            try:
-                emb = generar_embedding(texto)
-                key_elem = f"{key_base}_e{idx+1}"
-                redis_client.hset(key_elem, mapping={
-                    "pagina": str(num_pagina),
-                    "elemento": str(idx+1),
-                    "texto": texto,
-                    "embedding": json.dumps(emb)
-                })
-                contenido_pagina += texto + "\n"
-            except Exception as e:
-                print(f"[❌ error] Fallo embedding en p{num_pagina}_e{idx+1}: {e}")
-                registrar_error_reproceso(nombre_sin_extension, num_pagina, idx+1)
-
-        if contenido_pagina.strip():
-            try:
-                emb_pagina = generar_embedding(contenido_pagina)
-                redis_client.hset(key_base, mapping={
-                    "pagina": str(num_pagina),
-                    "texto": contenido_pagina.strip(),
-                    "embedding": json.dumps(emb_pagina)
-                })
-                texto_documento += contenido_pagina + "\n"
-                print(f"[embedding] ✅ Página {num_pagina} embebida")
-            except Exception as e:
-                print(f"[❌ error] Fallo embedding página {num_pagina}: {e}")
-                registrar_error_reproceso(nombre_sin_extension, num_pagina)
-
+    # Generar Embedding Nivel Documento
     if texto_documento.strip():
         try:
             emb_doc = generar_embedding(texto_documento)
-            redis_client.hset(f"doc_raw:{nombre_sin_extension}", mapping={
+            # Usar la clave normalizada
+            redis_client.hset(f"doc_raw:{doc_id_normalized}", mapping={
                 "nombre_original": nombre_archivo,
-                "doc_id": nombre_sin_extension,
+                "doc_id": doc_id_normalized,
                 "texto": texto_documento.strip(),
                 "embedding": json.dumps(emb_doc),
                 "pages_count": len(resultados),
                 "filename": nombre_archivo,
                 "timestamp": datetime.now().isoformat()
             })
-            print("[embedding] ✅ Embedding de documento completo generado")
+            print(f"[embedding] ✅ Embedding de documento completo generado para: {doc_id_normalized}")
         except Exception as e:
             print(f"[❌ error] Fallo embedding documento completo: {e}")
-            registrar_error_reproceso(nombre_sin_extension, -1)
+            registrar_error_reproceso(doc_id_normalized, -1)
 
     print("[embedding] ➕ Ejecutando refuerzo batch embedding con run_embedding_batch()")
     run_embedding_batch(nombre_sin_extension)

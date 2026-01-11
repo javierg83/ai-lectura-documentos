@@ -1,3 +1,11 @@
+---
+engine: "openai"
+model: "gpt-4o"
+# engine: "gemini"
+# model: "gemini-1.5-flash"
+temperature: 0.0
+output_format: "json"
+---
 ==============================
 EXTRACTOR SEMÁNTICO — ITEMS_LICITACION (v1)
 ==============================

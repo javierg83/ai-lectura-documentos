@@ -1,11 +1,12 @@
-import fitz  # PyMuPDF
-import base64
-import json
 import os
+import json
+import base64
+import fitz  # PyMuPDF
 from ai_extractor_pdf import analyze_page_with_gpt as analizar_pagina
 from embeddings import generar_embedding
 from utils.redis_utils import guardar_en_redis
 from utils.file_utils import normalizar_nombre  # ✅ Agregado
+from utils.logger import log_debug, log_error   # ✅ Logging
 
 def convertir_pagina_a_base64(pdf_path, page_number):
     with fitz.open(pdf_path) as doc:
@@ -39,24 +40,49 @@ def process_pages(pdf_path, carpeta_destino, paginas_especificas, read_all, doc_
                 }
                 resultados.append(resultado)
 
+                log_debug(f"Página {i+1}: Procesando {len(elementos)} elementos.")
+
                 for idx, elem in enumerate(elementos):
-                    texto = str(elem.get("contenido", "")).strip()
+                    # Manejar contenido que pueda ser lista (tabla) o string
+                    contenido_raw = elem.get("contenido", "")
+                    if isinstance(contenido_raw, list):
+                        # Convertir lista a string para embedding
+                        texto = json.dumps(contenido_raw, ensure_ascii=False)
+                    else:
+                        texto = str(contenido_raw).strip()
+                    
                     if texto:
                         emb = generar_embedding(texto)
                         if emb:
                             clave = f"doc_raw_page:{doc_id}:p{i+1}_e{idx+1}"
+                            log_debug(f"  -> Guardando elemento {idx+1} en Redis: {clave} (Tipo: {elem.get('tipo')})")
                             guardar_en_redis(clave, {
                                 "embedding": json.dumps(emb),
                                 "texto": texto,
                                 "pagina": i + 1,
                                 "tipo": elem.get("tipo", "")
                             })
+                        else:
+                             log_error(f"  -> Fallo embedding elemento {idx+1} (texto presente pero embedding nulo)")
+                    else:
+                        log_debug(f"  -> Elemento {idx+1} omitido (contenido vacío). Tipo: {elem.get('tipo')}")
 
-                texto_pagina = "\n".join(
-                    str(e.get("contenido", "")) for e in elementos if isinstance(e.get("contenido", ""), str)
-                )
+                # Recolectar todo el texto de la página, incluyendo tablas
+                text_parts = []
+                for e in elementos:
+                    cont = e.get("contenido", "")
+                    if isinstance(cont, list):
+                        # Aplanar tabla o lista
+                        text_parts.append(json.dumps(cont, ensure_ascii=False))
+                    else:
+                        text_parts.append(str(cont))
+                
+                texto_pagina = "\n".join(text_parts)
+                
                 if texto_pagina.strip():
+                    log_debug(f"Página {i+1}: Texto completo reunido (len={len(texto_pagina)}). Generando embedding de página...")
                     emb_pagina = generar_embedding(texto_pagina.strip())
+                    
                     if emb_pagina:
                         clave = f"doc_raw_page:{doc_id}:p{i+1}_full"
                         guardar_en_redis(clave, {
@@ -65,6 +91,11 @@ def process_pages(pdf_path, carpeta_destino, paginas_especificas, read_all, doc_
                             "pagina": i + 1,
                             "tipo": "pagina"
                         })
+                        log_debug(f"  -> ✅ Página {i+1} full embedding guardado en: {clave}")
+                    else:
+                        log_error(f"  -> ❌ Fallo embedding completo Página {i+1} (retornó None)")
+                else:
+                     log_debug(f"  -> ⚠️ Página {i+1} sin texto acumulado. No se genera embedding full.")
             except Exception as e:
                 print(f"[❌ ERROR] No se pudo procesar página {i + 1}: {e}")
 
