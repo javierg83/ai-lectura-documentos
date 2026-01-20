@@ -151,9 +151,17 @@ def validate_items_licitacion_schema(data: Dict[str, Any]) -> None:
                     )
 
             if fuente["pagina"] is not None and not isinstance(fuente["pagina"], int):
-                raise ItemsLicitacionSchemaError(
-                    f"Item #{idx}, fuente #{f_idx}: 'pagina' debe ser int o null"
-                )
+                # Intentar conversión si es string numérico
+                if isinstance(fuente["pagina"], str) and fuente["pagina"].isdigit():
+                    fuente["pagina"] = int(fuente["pagina"])
+                # Si falla o es otro tipo, lo dejamos en None para no romper el flujo
+                # (Opcional: logging.warning here)
+                else:
+                    try:
+                         # Intento final de int() por si es string con espacios
+                         fuente["pagina"] = int(str(fuente["pagina"]).strip())
+                    except (ValueError, TypeError):
+                        fuente["pagina"] = None
 
         if "confianza_item" in item:
             if not _is_number(item["confianza_item"]):

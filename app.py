@@ -87,7 +87,11 @@ def api_licitaciones():
     real_ids = [
         "2b54095a-5a9c-4510-ade8-4f426487c887",
         "080510e7-8bdb-45b8-8c92-e1cae71f704b",
-        "2c323852-1f2b-4dbf-8296-4a2cfcd92ae9"
+        "2c323852-1f2b-4dbf-8296-4a2cfcd92ae9",
+        "c9a6ccb7-77f6-473f-aece-5f8ee4114b96",
+        "fd9cc014-e5bf-43fc-96a6-a848503d07f0",
+        "6904be0a-6f0e-4431-9277-6f2d2a63c06e",
+        "25897492-1f0c-4d8f-a564-67d81fbf51b9"
     ]
 
     if True:  # No usar USE_MOCK aquí, porque es un mix

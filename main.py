@@ -22,6 +22,9 @@ PAGES=[48,49]
 UPLOAD_TO_REDIS=os.getenv('UPLOAD_TO_REDIS','true').lower() in ('1','true','yes')
 
 if __name__=='__main__':
+    from utils.logger import setup_full_console_logging
+    setup_full_console_logging()
+
     res=process_pages(PDF_PATH,READ_ALL,PAGES)
     print(f"Procesadas {len(res)} páginas.")
     base=Path(PDF_PATH).stem

@@ -79,3 +79,11 @@ def analyze_page_with_gpt(pdf_path: str, page_number: int, timeout: float = 60.0
     except Exception as e:
         print(f"[Extractor]   ✖ Error en llamada IA #{_request_count}: {e}")
         return [], "{}", 0, 0
+
+if __name__ == "__main__":
+    from utils.logger import setup_full_console_logging
+    setup_full_console_logging()
+    
+    # Ejemplo de uso simple si se corre directo
+    print("Corriendo extractor como script...")
+    # analyze_page_with_gpt("ruta/al/pdf.pdf", 0)

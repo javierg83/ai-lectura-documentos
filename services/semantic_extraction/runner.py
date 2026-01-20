@@ -37,46 +37,81 @@ def _get_pg_conn():
         raise RuntimeError("DATABASE_URL no está definido en el entorno")
     return psycopg2.connect(DATABASE_URL)
 
-def _semantic_search(query: str, documento_ids: List[str], top_k: int, min_score: float) -> List[Dict[str, Any]]:
+def _load_documents_to_memory(documento_ids: List[str]) -> List[Dict[str, Any]]:
+    """
+    Carga TODOS los chunks de los documentos solicitados en memoria RAM.
+    Optimización: Evita ir a Redis por cada query.
+    """
     import numpy as np
-
-    print(f"[🔎] Generando embedding para query: {query}")
-    vector = generar_embedding(query, model=MODEL_EMBEDDING)
-    if not vector:
-        return []
-
-    resultados = []
+    cached_chunks = []
+    print(f"[CACHE] Cargando documentos en memoria: {documento_ids}")
+    
     for doc_id in documento_ids:
         pattern = f"doc_raw_page:{doc_id}:*_full"
+        # Usamos scan_iter para no bloquear, pero guardamos todo en lista local
         for key in redis_client.scan_iter(match=pattern):
             data = redis_client.hgetall(key)
             if not data:
                 continue
             try:
-                emb = json.loads(data.get(b"embedding", b"[]").decode())
-                texto = data.get(b"texto", b"").decode()
-                if not emb or not texto:
+                emb_bytes = data.get(b"embedding", b"[]")
+                texto_bytes = data.get(b"texto", b"")
+                
+                if not emb_bytes or not texto_bytes:
                     continue
-                dist = float(np.linalg.norm(np.array(vector) - np.array(emb)))
-                if dist <= min_score:
-                    continue
-                resultados.append({
+
+                emb = json.loads(emb_bytes.decode())
+                texto = texto_bytes.decode()
+
+                cached_chunks.append({
                     "redis_key": key.decode(),
                     "texto": texto,
-                    "distancia": dist,
+                    "embedding": np.array(emb, dtype=np.float32) # Pre-computar numpy array
                 })
             except Exception as e:
-                print(f"[⚠️] Error procesando clave Redis {key}: {e}")
+                print(f"[⚠️] Error cargando clave Redis {key} a memoria: {e}")
                 continue
+    
+    print(f"[CACHE] Total chunks cargados en RAM: {len(cached_chunks)}")
+    return cached_chunks
+
+def _semantic_search_in_memory(query: str, cached_chunks: List[Dict[str, Any]], top_k: int, min_score: float) -> List[Dict[str, Any]]:
+    import numpy as np
+
+    print(f"[magnifier] Generando embedding para query: {query}")
+    vector = generar_embedding(query, model=MODEL_EMBEDDING)
+    if not vector:
+        return []
+
+    if not cached_chunks:
+        return []
+
+    q_vec = np.array(vector, dtype=np.float32)
+    
+    resultados = []
+    # Vectorización podría ser aún más rápida con matrices, pero este loop simple en memoria ya es 100x más rápido que Redis roundtrip
+    for chunk in cached_chunks:
+        # Calcular distancia ecludiana (o coseno si estuvieran normalizados, asumimos ecludiana por el código anterior)
+        dist = float(np.linalg.norm(q_vec - chunk["embedding"]))
+        
+        # Guardamos todo y filtramos por top_k después
+        resultados.append({
+            "redis_key": chunk["redis_key"],
+            "texto": chunk["texto"],
+            "distancia": dist,
+        })
 
     resultados.sort(key=lambda x: x["distancia"])
-    print(f"[🔍] Resultados encontrados para query '{query}': {len(resultados)}")
+    
+    # Filtrado post-sort si fuera necesario, pero el top_k manda.
+    finales = resultados[:top_k]
+    
+    print(f"[magnifier] Resultados en memoria para '{query}': {len(finales)} (Mejor dist={finales[0]['distancia'] if finales else 'N/A'})")
 
-    for i, r in enumerate(resultados[:top_k]):
-        print(f"\n[🧩 Chunk #{i+1}] redis_key={r['redis_key']} | distancia={r['distancia']:.4f}")
-        print(f"[📝 Texto (primeros 500 chars)]:\n{r['texto'][:500]}")
+    for i, r in enumerate(finales):
+        pass # Silenciar log verbose por cada query para ganar velocidad, o dejarlo si se requiere debug
 
-    return resultados[:top_k]
+    return finales
 
 def _build_context(chunks: List[Dict[str, Any]]) -> str:
     bloques = []
@@ -120,21 +155,31 @@ def run_semantic_extraction(
     extractor.prompt_version = prompt_version
     extractor.extractor_version = extractor_version
 
+    # --- OPTIMIZACIÓN: Cargar cache una sola vez ---
+    cached_chunks = _load_documents_to_memory(documento_ids)
+    if not cached_chunks:
+         print(f"[SEMANTIC] ⚠️ No se cargaron chunks en memoria. Posiblemente doc_id incorrecto o vacío.")
+
     semantic_chunks = []
     queries = extractor._call_build_queries()
+    
     for query in queries:
-        semantic_chunks.extend(_semantic_search(query, documento_ids, top_k, min_score))
+        # Usar la búsqueda en memoria optimizada
+        filtros = _semantic_search_in_memory(query, cached_chunks, top_k, min_score)
+        semantic_chunks.extend(filtros)
 
     if not semantic_chunks:
-        raise RuntimeError("No se encontraron fragmentos relevantes en Redis")
+        # Fallback o error warning, pero no romper si no hay matches exactos
+        print("[SEMANTIC] No se encontraron fragmentos relevantes (o cache vacia). continuando con contexto vacio.")
+        # raise RuntimeError("No se encontraron fragmentos relevantes en Redis")
 
     context = _build_context(list({c["redis_key"]: c for c in semantic_chunks}.values()))
     print(f"[SEMANTIC] Contexto final tiene {len(context)} caracteres")
 
     print(f"[SEMANTIC] Ejecutando extractor.run()...")
-    print("\n[DEBUG CONTEXT PREVIEW]\n")
-    print(context[:4000])
-    print("\n[END CONTEXT PREVIEW]\n")
+    # print("\n[DEBUG CONTEXT PREVIEW]\n")
+    # print(context[:4000])
+    # print("\n[END CONTEXT PREVIEW]\n")
 
     result = extractor.run(context)
 

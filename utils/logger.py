@@ -37,16 +37,23 @@ class DualLogger:
     """Escribe tanto en terminal como en archivo."""
     def __init__(self, filepath, stream):
         self.terminal = stream
-        self.log = open(filepath, 'a', encoding='utf-8')
+        try:
+            self.log = open(filepath, 'a', encoding='utf-8')
+        except Exception as e:
+            # Fallback if file cannot be opened, though this should be rare given check in setup
+            self.terminal.write(f"!! Error opening log file {filepath}: {e}\n")
+            self.log = None
 
     def write(self, message):
         self.terminal.write(message)
-        self.log.write(message)
-        self.log.flush()  # Force write to disk
+        if self.log:
+            self.log.write(message)
+            self.log.flush()  # Force write to disk
 
     def flush(self):
         self.terminal.flush()
-        self.log.flush()
+        if self.log:
+            self.log.flush()
 
 def setup_full_console_logging():
     """Redirige sys.stdout y sys.stderr al archivo de log."""
